@@ -159,6 +159,27 @@
       pointer-events: none;
       opacity: .65;
     }
+    .btn-outline-store {
+      color: #d97706;
+      border-color: #f59e0b;
+      background-color: transparent;
+      transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .btn-outline-store:hover,
+    .btn-outline-store:focus,
+    .btn-outline-store:active {
+      color: #fff;
+      background-color: #f59e0b;
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 .2rem rgba(245, 158, 11, .25);
+    }
+    .btn-outline-store:disabled,
+    .btn-outline-store.disabled {
+      color: rgba(217, 119, 6, .7);
+      border-color: rgba(245, 158, 11, .45);
+      background-color: transparent;
+      box-shadow: none;
+    }
     @media (max-width: 767.98px) {
       main {
         padding: 3rem 1rem 4rem;
@@ -218,7 +239,7 @@
               <input id="gasIdInput" type="text" class="form-control form-control-lg" data-i18n-placeholder="gasIdPlaceholder" autocomplete="off" />
             </div>
             <div class="col-md-4">
-              <button id="lookupSubmit" type="submit" class="btn btn-primary btn-lg w-100">
+              <button id="lookupSubmit" type="submit" class="btn btn-outline-primary btn-lg w-100">
                 <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
                 <span data-i18n="verifyButton">Open store</span>
               </button>
@@ -240,7 +261,7 @@
             </div>
             <p id="storeServices" class="text-muted mt-3 mb-3"></p>
             <div class="d-flex flex-wrap gap-2">
-              <button id="storeOpenHere" type="button" class="btn btn-outline-secondary">
+              <button id="storeOpenHere" type="button" class="btn btn-outline-store">
                 <span data-i18n="embedToggleShow">View here</span>
               </button>
             </div>
