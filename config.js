@@ -13,7 +13,7 @@ window.MISEMARU.GAS_BASE = "https://script.google.com/macros/s/AKfycbyHtFw5pTkHu
 // Tenant URLs (used by parent UI when child requests to close)
 // Use var to expose as global identifiers for existing code paths
 var HOME_URL = "https://nakayamaworks.github.io/misemaru_cloud/";
-var ADMIN_URL = "https://nakayamaworks.github.io/misemaru_cloud/admin";
+var ADMIN_URL = window.MISEMARU.GAS_BASE ? window.MISEMARU.GAS_BASE + "?page=32_index_admin" : HOME_URL;
 
 // Language configuration per tenant (client-side only)
 // Default initial language for first-time visitors
