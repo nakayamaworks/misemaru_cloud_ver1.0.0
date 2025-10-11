@@ -93,69 +93,20 @@
     .store-app {
       position: fixed;
       inset: 0;
-      display: flex;
+      display: none;
       flex-direction: column;
-      background: radial-gradient(circle at top, #111827 0%, #0f172a 50%, #020617 100%);
-      color: #e2e8f0;
+      background: #020617;
       z-index: 1040;
     }
-    .store-app.d-none {
-      display: none !important;
+    .store-app.active {
+      display: flex;
     }
     body.store-view {
       overflow: hidden;
-      background: #0f172a;
+      background: #020617;
     }
     body.store-view main {
       display: none;
-    }
-    .store-app-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: .75rem 1.5rem;
-      background: rgba(15, 23, 42, .88);
-      border-bottom: 1px solid rgba(148, 163, 184, .3);
-      backdrop-filter: blur(14px);
-    }
-    .store-app-back {
-      display: inline-flex;
-      align-items: center;
-      gap: .25rem;
-      color: #e2e8f0;
-      text-decoration: none;
-    }
-    .store-app-back .icon {
-      font-size: 1.1rem;
-      line-height: 1;
-    }
-    .store-app-meta {
-      display: flex;
-      flex-direction: column;
-      gap: .2rem;
-      min-width: 0;
-    }
-    .store-app-meta strong {
-      font-size: 1rem;
-      color: #f8fafc;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .store-app-meta span {
-      font-size: .85rem;
-      color: rgba(226, 232, 240, .8);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .store-app-controls {
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
     }
     .store-app-frame {
       position: relative;
@@ -226,14 +177,6 @@
       .store-card {
         padding: 1.25rem;
       }
-      .store-app-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: .75rem;
-      }
-      .store-app-controls {
-        justify-content: flex-start;
-      }
     }
   </style>
 </head>
@@ -300,9 +243,6 @@
               <button id="storeOpenHere" type="button" class="btn btn-outline-secondary">
                 <span data-i18n="embedToggleShow">View here</span>
               </button>
-              <a id="storeExternalLink" class="btn btn-primary" target="_blank" rel="noopener">
-                <span data-i18n="openStoreButton">Open in new tab</span>
-              </a>
             </div>
           </div>
         </div>
@@ -344,22 +284,7 @@
     </section>
   </main>
 
-  <div id="storeApp" class="store-app d-none" aria-hidden="true">
-    <div class="store-app-header">
-      <button id="storeAppBack" type="button" class="btn btn-outline-light btn-sm store-app-back">
-        <span class="icon">&larr;</span>
-        <span data-i18n="backToPortal">Back to portal</span>
-      </button>
-      <div class="store-app-meta">
-        <strong id="storeAppName"></strong>
-        <span id="storeAppCountry"></span>
-      </div>
-      <div class="store-app-controls">
-        <a id="storeAppOpenExternal" class="btn btn-outline-light btn-sm" target="_blank" rel="noopener">
-          <span data-i18n="openStoreButton">Open in new tab</span>
-        </a>
-      </div>
-    </div>
+  <div id="storeApp" class="store-app" aria-hidden="true">
     <div class="store-app-frame">
       <div id="storeIframeOverlay" class="iframe-overlay">
         <div class="spinner-border text-light" role="status" aria-hidden="true"></div>

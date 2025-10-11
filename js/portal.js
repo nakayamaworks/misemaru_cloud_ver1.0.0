@@ -19,7 +19,7 @@ const DICT = {
     storeAccessDescription: "管理者から共有された GAS ID を入力して認証済み店舗に移動します。",
     gasIdLabel: "店舗 GAS ID",
     gasIdPlaceholder: "例: AKfycbwXXXXXXXXXXXXXXX",
-    verifyButton: "店舗ページを開く",
+    verifyButton: "店舗を確認",
     verifyingMessage: "店舗情報を確認しています…",
     notFoundMessage: "該当する店舗が見つかりませんでした。",
     unverifiedMessage: "この店舗はまだ認証プロセスが完了していません。",
@@ -92,7 +92,7 @@ const DICT = {
     storeAccessDescription: "Enter the GAS ID provided by the store owner to open a verified tenant.",
     gasIdLabel: "Store GAS ID",
     gasIdPlaceholder: "Example: AKfycbwXXXXXXXXXXXXXXX",
-    verifyButton: "Open store",
+    verifyButton: "Check store",
     verifyingMessage: "Checking store registry…",
     notFoundMessage: "No matching store was found.",
     unverifiedMessage: "This store has not completed the verification process yet.",
@@ -165,7 +165,7 @@ const DICT = {
     storeAccessDescription: "输入门店提供的 GAS ID 以打开已认证的租户。",
     gasIdLabel: "门店 GAS ID",
     gasIdPlaceholder: "示例: AKfycbwXXXXXXXXXXXXXXX",
-    verifyButton: "打开门店",
+    verifyButton: "查看门店",
     verifyingMessage: "正在检查门店注册信息…",
     notFoundMessage: "未找到匹配的门店。",
     unverifiedMessage: "该门店尚未完成认证流程。",
@@ -238,7 +238,7 @@ const DICT = {
     storeAccessDescription: "Introduce el GAS ID proporcionado por la tienda para abrir un tenant verificado.",
     gasIdLabel: "GAS ID de la tienda",
     gasIdPlaceholder: "Ejemplo: AKfycbwXXXXXXXXXXXXXXX",
-    verifyButton: "Abrir tienda",
+    verifyButton: "Ver tienda",
     verifyingMessage: "Comprobando el registro de la tienda…",
     notFoundMessage: "No se encontró ninguna tienda con ese identificador.",
     unverifiedMessage: "Esta tienda aún no ha completado el proceso de verificación.",
@@ -311,7 +311,7 @@ const DICT = {
     storeAccessDescription: "매장 관리자에게 받은 GAS ID 를 입력하면 인증된 테넌트로 이동합니다.",
     gasIdLabel: "매장 GAS ID",
     gasIdPlaceholder: "예: AKfycbwXXXXXXXXXXXXXXX",
-    verifyButton: "매장 열기",
+    verifyButton: "매장 확인",
     verifyingMessage: "매장 등록 정보를 확인하는 중…",
     notFoundMessage: "해당하는 매장을 찾을 수 없습니다.",
     unverifiedMessage: "이 매장은 아직 인증 절차를 완료하지 않았습니다.",
@@ -489,10 +489,6 @@ function refreshStoreTranslations() {
   if (countryEl) {
     countryEl.textContent = formatCountry(store.country);
   }
-  const appCountryEl = document.getElementById("storeAppCountry");
-  if (appCountryEl) {
-    appCountryEl.textContent = formatCountry(store.country);
-  }
   const verifiedDateEl = document.getElementById("verifiedDate");
   if (verifiedDateEl) {
     const text = formatVerifiedDate(store.verifiedAt);
@@ -607,7 +603,7 @@ function resetStoreIframe() {
     iframe.dataset.src = "";
   }
   if (wrap) {
-    wrap.classList.add("d-none");
+    wrap.classList.remove("active");
     wrap.setAttribute("aria-hidden", "true");
   }
   if (overlay) overlay.classList.remove("show");
@@ -622,7 +618,7 @@ function loadStoreIframe(url) {
     resetStoreIframe();
     return;
   }
-  wrap.classList.remove("d-none");
+  wrap.classList.add("active");
   wrap.setAttribute("aria-hidden", "false");
   document.body.classList.add("store-view");
   if (overlay) overlay.classList.add("show");
@@ -649,10 +645,6 @@ function loadStoreIframe(url) {
   iframe.setAttribute("src", url);
 }
 
-function exitStoreView() {
-  resetStoreIframe();
-}
-
 function openStoreInline() {
   if (!state.store) return;
   const url = resolveEmbedUrl(state.store);
@@ -666,10 +658,6 @@ function clearStoreDisplay() {
   const card = document.getElementById("storeCard");
   if (card) card.classList.add("d-none");
   resetStoreIframe();
-  const appNameEl = document.getElementById("storeAppName");
-  const appCountryEl = document.getElementById("storeAppCountry");
-  if (appNameEl) appNameEl.textContent = "";
-  if (appCountryEl) appCountryEl.textContent = "";
   setMockNoticeVisible(false);
 }
 
@@ -747,7 +735,6 @@ function renderStore(store, options) {
   const country = formatCountry(store.country);
   const servicesSummary = formatServices(store);
   const verifiedDateText = formatVerifiedDate(store.verifiedAt);
-  const externalUrl = store.publicUrl || store.portalUrl || store.url || store.iframeUrl || "";
   const embedUrl = resolveEmbedUrl(store);
 
   const nameEl = document.getElementById("storeName");
@@ -755,11 +742,7 @@ function renderStore(store, options) {
   const servicesEl = document.getElementById("storeServices");
   const dateEl = document.getElementById("verifiedDate");
   const verifiedBadge = document.getElementById("verifiedBadge");
-  const externalLink = document.getElementById("storeExternalLink");
   const openHereBtn = document.getElementById("storeOpenHere");
-  const appNameEl = document.getElementById("storeAppName");
-  const appCountryEl = document.getElementById("storeAppCountry");
-  const appExternalLink = document.getElementById("storeAppOpenExternal");
 
   if (nameEl) nameEl.textContent = name;
   if (countryEl) countryEl.textContent = country;
@@ -771,33 +754,6 @@ function renderStore(store, options) {
     verifiedBadge.textContent = t("verifiedBadge");
   }
 
-  if (externalLink) {
-    if (externalUrl) {
-      externalLink.href = externalUrl;
-      externalLink.classList.remove("disabled");
-      externalLink.setAttribute("aria-disabled", "false");
-      externalLink.removeAttribute("tabindex");
-    } else {
-      externalLink.removeAttribute("href");
-      externalLink.classList.add("disabled");
-      externalLink.setAttribute("aria-disabled", "true");
-      externalLink.setAttribute("tabindex", "-1");
-    }
-  }
-
-  if (appExternalLink) {
-    if (externalUrl) {
-      appExternalLink.href = externalUrl;
-      appExternalLink.classList.remove("disabled");
-      appExternalLink.setAttribute("aria-disabled", "false");
-      appExternalLink.removeAttribute("tabindex");
-    } else {
-      appExternalLink.removeAttribute("href");
-      appExternalLink.classList.add("disabled");
-      appExternalLink.setAttribute("aria-disabled", "true");
-      appExternalLink.setAttribute("tabindex", "-1");
-    }
-  }
   if (openHereBtn) {
     if (embedUrl) {
       openHereBtn.disabled = false;
@@ -805,11 +761,8 @@ function renderStore(store, options) {
       openHereBtn.disabled = true;
     }
   }
-  if (appNameEl) appNameEl.textContent = name;
-  if (appCountryEl) appCountryEl.textContent = country;
 
-  if (embedUrl) loadStoreIframe(embedUrl);
-  else resetStoreIframe();
+  resetStoreIframe();
 
   card.classList.remove("d-none");
   setMockNoticeVisible(state.usedMock);
@@ -1190,8 +1143,6 @@ function init() {
   if (form) form.addEventListener("submit", handleLookup);
   const openHereBtn = document.getElementById("storeOpenHere");
   if (openHereBtn) openHereBtn.addEventListener("click", openStoreInline);
-  const backBtn = document.getElementById("storeAppBack");
-  if (backBtn) backBtn.addEventListener("click", exitStoreView);
 
   initStoresDirectory();
 
