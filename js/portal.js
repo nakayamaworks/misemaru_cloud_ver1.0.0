@@ -391,6 +391,7 @@ const state = {
   usedMock: false,
   autoOpenTargetId: "",
   autoOpenActive: false,
+  activeFriendlyId: "",
   directoryStores: [],
   directoryFilter: "",
   directoryCountries: [],
@@ -440,13 +441,23 @@ function safeLocalStorageSet(key, value) {
   }
 }
 
-function updateUrlParam(lang, gasId) {
+function updateUrlParam(lang, gasId, options) {
+  const opts = Object.assign({ friendlyId: "" }, options || {});
   try {
     const url = new URL(window.location.href);
     if (lang) url.searchParams.set(LANG_PARAM, lang);
     else url.searchParams.delete(LANG_PARAM);
-    if (gasId) url.searchParams.set(GAS_PARAM, gasId);
-    else url.searchParams.delete(GAS_PARAM);
+    const friendly = String(opts.friendlyId || "").trim();
+    if (friendly) {
+      url.searchParams.set("id", friendly);
+      url.searchParams.delete(GAS_PARAM);
+    } else if (gasId) {
+      url.searchParams.set(GAS_PARAM, gasId);
+      url.searchParams.delete("id");
+    } else {
+      url.searchParams.delete(GAS_PARAM);
+      url.searchParams.delete("id");
+    }
     window.history.replaceState({}, "", url.toString());
   } catch (_) {
     /* ignore */
@@ -530,7 +541,7 @@ function setLanguage(lang, options) {
   if (opts.persist) safeLocalStorageSet(LS_KEY, resolved);
   if (opts.updateParam) {
     const gasId = document.getElementById("gasIdInput")?.value || null;
-    updateUrlParam(resolved, gasId);
+    updateUrlParam(resolved, gasId, { friendlyId: state.activeFriendlyId });
   }
   syncSelects(resolved);
   applyTranslations(resolved);
@@ -839,8 +850,90 @@ async function lookupRegistry(gasId) {
 function lookupMock(gasId) {
   const list = (window.MISEMARU && window.MISEMARU.MOCK_REGISTRY) || [];
   if (!Array.isArray(list)) return null;
-  const target = list.find((item) => String(item.gasId || "").toLowerCase() === gasId.toLowerCase());
+  const norm = String(gasId || "").toLowerCase();
+  const target = list.find((item) => {
+    const id = extractGasId(item);
+    return id && id.toLowerCase() === norm;
+  });
   return target || null;
+}
+
+function lookupMockByFriendlyId(friendlyId) {
+  const list = (window.MISEMARU && window.MISEMARU.MOCK_REGISTRY) || [];
+  if (!Array.isArray(list)) return null;
+  const norm = String(friendlyId || "").toLowerCase();
+  const target = list.find((item) => {
+    const alias = extractFriendlyId(item);
+    return alias && alias.toLowerCase() === norm;
+  });
+  return target || null;
+}
+
+function resolveFriendlyIdFromConfig(friendlyId) {
+  const map = (window.MISEMARU && window.MISEMARU.FRIENDLY_IDS) || null;
+  if (!map) return "";
+  if (typeof map === "object" && map !== null) {
+    const direct = map[friendlyId];
+    if (direct) return String(direct);
+    const norm = friendlyId.toLowerCase();
+    for (const [key, value] of Object.entries(map)) {
+      if (String(key).toLowerCase() === norm && value) return String(value);
+    }
+  }
+  return "";
+}
+
+async function resolveFriendlyId(friendlyId) {
+  const trimmed = String(friendlyId || "").trim();
+  if (!trimmed) return "";
+  if (looksLikeGasId(trimmed)) return trimmed;
+  const configMatch = resolveFriendlyIdFromConfig(trimmed);
+  if (configMatch) return configMatch;
+
+  const mockMatch = lookupMock(trimmed) || lookupMockByFriendlyId(trimmed);
+  if (mockMatch) {
+    const mockGasId = extractGasId(mockMatch);
+    if (mockGasId) return mockGasId;
+  }
+
+  if (registryApi) {
+    try {
+      const url = new URL(registryApi);
+      url.searchParams.set("action", "lookup");
+      url.searchParams.set("friendlyId", trimmed);
+      const resp = await fetch(url.toString(), {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const store = data?.store || data?.result || null;
+        const gasId = extractGasId(store);
+        if (gasId) return gasId;
+      }
+    } catch (err) {
+      console.warn("[portal] friendly lookup (direct) failed", err);
+    }
+    try {
+      const listResp = await fetchRegistryList();
+      if (listResp.ok && Array.isArray(listResp.stores)) {
+        const norm = trimmed.toLowerCase();
+        const matchedRaw = listResp.stores.find((item) => {
+          const alias = extractFriendlyId(item);
+          return alias && alias.toLowerCase() === norm;
+        });
+        if (matchedRaw) {
+          const gasId = extractGasId(matchedRaw);
+          if (gasId) return gasId;
+        }
+      }
+    } catch (err) {
+      console.warn("[portal] friendly lookup (list) failed", err);
+    }
+  }
+
+  return "";
 }
 
 async function handleLookup(event) {
@@ -856,13 +949,15 @@ async function handleLookup(event) {
   const normalizedId = raw.toLowerCase();
   const autoOpenThisLookup = state.autoOpenActive && state.autoOpenTargetId === normalizedId;
   if (autoOpenThisLookup) state.autoOpenTargetId = "";
+  else state.activeFriendlyId = "";
   setStatus("verifyingMessage", "info");
   clearStoreDisplay();
   setLoading(true);
   state.usedMock = false;
   try {
     const gasId = raw;
-    updateUrlParam(state.lang, gasId);
+    const friendlyForUrl = autoOpenThisLookup ? state.activeFriendlyId : "";
+    updateUrlParam(state.lang, gasId, { friendlyId: friendlyForUrl });
     let response = await lookupRegistry(gasId);
     if (!response.ok) {
       if (response.error === "registry_missing") {
@@ -935,6 +1030,53 @@ function formatDirectoryStatus(store) {
   return t("storesStatusVerified");
 }
 
+function looksLikeGasId(value) {
+  const str = String(value || "").trim();
+  return /^AK/i.test(str) && str.length > 10;
+}
+
+function extractGasId(raw) {
+  const candidates = [
+    raw?.gasId,
+    raw?.gasid,
+    raw?.scriptId,
+    raw?.executionId,
+    raw?.deploymentId,
+    raw?.scriptUrl,
+    raw?.iframeUrl,
+    raw?.portalUrl,
+    raw?.publicUrl,
+    raw?.url,
+    raw?.id,
+  ];
+  for (const candidate of candidates) {
+    const str = String(candidate || "").trim();
+    if (!str) continue;
+    if (looksLikeGasId(str)) return str;
+  }
+  return "";
+}
+
+function extractFriendlyId(raw) {
+  const candidates = [
+    raw?.alias,
+    raw?.friendlyId,
+    raw?.storeId,
+    raw?.storeAlias,
+    raw?.storeSlug,
+    raw?.slug,
+    raw?.customId,
+    raw?.shortId,
+    raw?.id,
+  ];
+  for (const candidate of candidates) {
+    const str = String(candidate || "").trim();
+    if (!str) continue;
+    if (!looksLikeGasId(str)) return str;
+  }
+  return "";
+}
+
 function normalizeStoreRecord(raw) {
   const servicesArray = getServicesArray(raw);
   const countryCode = String(raw.country || raw.region || "").trim().toUpperCase();
@@ -944,9 +1086,12 @@ function normalizeStoreRecord(raw) {
     else if (raw.verified === true) status = "verified";
     else status = "pending";
   }
+  const gasId = extractGasId(raw);
+  const alias = extractFriendlyId(raw);
   return {
-    gasId: raw.gasId || raw.id || "",
-    storeName: raw.storeName || raw.name || raw.title || raw.label || raw.gasId || "",
+    gasId,
+    alias,
+    storeName: raw.storeName || raw.name || raw.title || raw.label || gasId || "",
     country: countryCode,
     servicesArray,
     verified: raw.verified === undefined ? status === "verified" : !!raw.verified,
@@ -1167,14 +1312,45 @@ function scheduleAutoLookup(gasId) {
   }, 200);
 }
 
+async function launchFriendlyId(friendlyId) {
+  const trimmed = String(friendlyId || "").trim();
+  if (!trimmed) return;
+  state.activeFriendlyId = trimmed;
+  beginAutoOpen(trimmed);
+  try {
+    const gasId = await resolveFriendlyId(trimmed);
+    if (!gasId) {
+      cancelAutoOpen();
+      setStatus("notFoundMessage", "warning");
+      return;
+    }
+    state.autoOpenTargetId = String(gasId).toLowerCase();
+    state.autoOpenActive = true;
+    const input = document.getElementById("gasIdInput");
+    if (input) input.value = gasId;
+    setTimeout(() => {
+      const form = document.getElementById("storeLookupForm");
+      if (form) handleLookup(new Event("submit", { cancelable: true, bubbles: true }));
+    }, 120);
+  } catch (err) {
+    console.warn("[portal] friendly launch failed", err);
+    cancelAutoOpen();
+    setStatus("errorMessage", "error");
+  }
+}
+
 function init() {
   populateLanguageSelects();
   const url = new URL(window.location.href);
   const urlLang = resolveLang(url.searchParams.get(LANG_PARAM));
   const storedLang = resolveLang(safeLocalStorageGet(LS_KEY));
   const browserLang = resolveLang(navigator.language);
+  const friendlyIdParam = (url.searchParams.get("id") || "").trim();
   const initialLang = urlLang || storedLang || browserLang || "en";
-  const skipLanguageStep = Boolean(urlLang || storedLang);
+  const skipLanguageStep = Boolean(urlLang || storedLang || friendlyIdParam);
+  if (friendlyIdParam) {
+    state.activeFriendlyId = friendlyIdParam;
+  }
 
   setLanguage(initialLang, { persist: Boolean(urlLang || storedLang), updateParam: Boolean(urlLang) });
 
@@ -1213,6 +1389,8 @@ function init() {
   const gasIdParam = url.searchParams.get(GAS_PARAM);
   if (gasIdParam && skipLanguageStep) {
     scheduleAutoLookup(gasIdParam);
+  } else if (friendlyIdParam) {
+    launchFriendlyId(friendlyIdParam);
   }
 }
 
