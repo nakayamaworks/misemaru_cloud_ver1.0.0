@@ -384,6 +384,7 @@ const state = {
   statusKey: null,
   statusTone: "info",
   usedMock: false,
+  autoOpenTargetId: "",
   directoryStores: [],
   directoryFilter: "",
   directoryCountries: [],
@@ -762,7 +763,9 @@ function renderStore(store, options) {
     }
   }
 
-  resetStoreIframe();
+  const shouldAutoOpen = Boolean(opts.autoOpen) && Boolean(embedUrl);
+  if (shouldAutoOpen) openStoreInline();
+  else resetStoreIframe();
 
   card.classList.remove("d-none");
   setMockNoticeVisible(state.usedMock);
@@ -805,8 +808,11 @@ async function handleLookup(event) {
   const raw = input.value.trim();
   if (!raw) {
     setStatus("gasIdRequired", "warning");
+    state.autoOpenTargetId = "";
     return;
   }
+  const normalizedId = raw.toLowerCase();
+  const autoOpenThisLookup = state.autoOpenTargetId && state.autoOpenTargetId === normalizedId;
   setStatus("verifyingMessage", "info");
   clearStoreDisplay();
   setLoading(true);
@@ -820,7 +826,7 @@ async function handleLookup(event) {
         setStatus("registryMissingMessage", "warning");
         const store = lookupMock(gasId);
         if (store && store.verified !== false) {
-          renderStore(store, { fromMock: true });
+          renderStore(store, { fromMock: true, autoOpen: autoOpenThisLookup });
           setStatus("statusSuccess", "success");
         } else if (store && store.verified === false) {
           setStatus("unverifiedMessage", "warning");
@@ -833,7 +839,7 @@ async function handleLookup(event) {
       if (response.error === "not_found") {
         const mock = lookupMock(gasId);
         if (mock && mock.verified !== false) {
-          renderStore(mock, { fromMock: true });
+          renderStore(mock, { fromMock: true, autoOpen: autoOpenThisLookup });
           setStatus("statusSuccess", "success");
           setMockNoticeVisible(true);
         } else if (mock && mock.verified === false) {
@@ -854,20 +860,21 @@ async function handleLookup(event) {
       setStatus("unverifiedMessage", "warning");
       return;
     }
-    renderStore(store, { fromMock: false });
+    renderStore(store, { fromMock: false, autoOpen: autoOpenThisLookup });
     setStatus("statusSuccess", "success");
     setMockNoticeVisible(false);
   } catch (err) {
     console.warn("[portal] lookup error", err);
     const mock = lookupMock(raw);
     if (mock) {
-      renderStore(mock, { fromMock: true });
+      renderStore(mock, { fromMock: true, autoOpen: autoOpenThisLookup });
       setStatus("statusSuccess", "success");
       setMockNoticeVisible(true);
     } else {
       setStatus("errorMessage", "error");
     }
   } finally {
+    state.autoOpenTargetId = "";
     setLoading(false);
   }
 }
@@ -1101,6 +1108,8 @@ function initStoresDirectory() {
 
 function scheduleAutoLookup(gasId) {
   if (!gasId) return;
+  const normalized = String(gasId || "").trim().toLowerCase();
+  state.autoOpenTargetId = normalized;
   const input = document.getElementById("gasIdInput");
   if (input) input.value = gasId;
   setTimeout(() => {
