@@ -49,6 +49,7 @@ const DICT = {
     gasIdRequired: "店舗 GAS ID を入力してください。",
     statusSuccess: "認証済み店舗が見つかりました。下の操作から続きを行ってください。",
     verifiedOnLabel: "最終認証日",
+    loadingStoreMessage: "店舗情報を取得しています…",
     createPageTitle: "店舗開設ガイド",
     createPageLead: "みせまるクラウドに店舗を登録するための準備〜公開手順をまとめました。",
     createSectionBasicsTitle: "準備：基本設定",
@@ -122,6 +123,7 @@ const DICT = {
     gasIdRequired: "Please enter a store GAS ID.",
     statusSuccess: "Verified store found. Opening options below.",
     verifiedOnLabel: "Verified on",
+    loadingStoreMessage: "Fetching store experience…",
     createPageTitle: "Store Onboarding Guide",
     createPageLead: "Follow this checklist to prepare, deploy, and verify your Misemaru Cloud store.",
     createSectionBasicsTitle: "Preparation: essentials",
@@ -195,6 +197,7 @@ const DICT = {
     gasIdRequired: "请输入门店 GAS ID。",
     statusSuccess: "已找到认证门店。请使用下方选项继续。",
     verifiedOnLabel: "认证日期",
+    loadingStoreMessage: "正在获取门店页面…",
     createPageTitle: "门店上线指南",
     createPageLead: "按照下面的步骤准备、部署并完成 Misemaru Cloud 门店的认证。",
     createSectionBasicsTitle: "准备：基础信息",
@@ -268,6 +271,7 @@ const DICT = {
     gasIdRequired: "Introduce el GAS ID de la tienda.",
     statusSuccess: "Tienda verificada encontrada. Usa las opciones siguientes para continuar.",
     verifiedOnLabel: "Verificada el",
+    loadingStoreMessage: "Cargando la experiencia de la tienda…",
     createPageTitle: "Guía de incorporación de tiendas",
     createPageLead: "Sigue estos pasos para preparar, desplegar y verificar tu tienda Misemaru Cloud.",
     createSectionBasicsTitle: "Preparación: elementos clave",
@@ -341,6 +345,7 @@ const DICT = {
     gasIdRequired: "매장 GAS ID 를 입력하세요.",
     statusSuccess: "인증된 매장을 찾았습니다. 아래 옵션으로 계속 진행하세요.",
     verifiedOnLabel: "인증 날짜",
+    loadingStoreMessage: "매장 페이지를 불러오는 중…",
     createPageTitle: "매장 개설 가이드",
     createPageLead: "다음 체크리스트를 따라 Misemaru Cloud 매장을 준비, 배포, 인증하세요.",
     createSectionBasicsTitle: "준비: 기본 항목",
@@ -385,6 +390,7 @@ const state = {
   statusTone: "info",
   usedMock: false,
   autoOpenTargetId: "",
+  autoOpenActive: false,
   directoryStores: [],
   directoryFilter: "",
   directoryCountries: [],
@@ -588,6 +594,36 @@ function setLoading(isLoading) {
   if (input) input.disabled = !!isLoading;
 }
 
+function showGlobalPreloader() {
+  const overlay = document.getElementById("globalPreloader");
+  if (!overlay) return;
+  overlay.classList.add("active");
+  overlay.setAttribute("aria-busy", "true");
+}
+
+function hideGlobalPreloader() {
+  const overlay = document.getElementById("globalPreloader");
+  if (!overlay) return;
+  overlay.classList.remove("active");
+  overlay.setAttribute("aria-busy", "false");
+}
+
+function beginAutoOpen(gasId) {
+  const normalized = String(gasId || "").trim().toLowerCase();
+  if (!normalized) return;
+  state.autoOpenTargetId = normalized;
+  state.autoOpenActive = true;
+  showGlobalPreloader();
+}
+
+function cancelAutoOpen() {
+  state.autoOpenTargetId = "";
+  if (state.autoOpenActive) {
+    state.autoOpenActive = false;
+    hideGlobalPreloader();
+  }
+}
+
 function getStoreIframeElements() {
   // 埋め込み iframe とその付随要素をまとめて取得する
   const wrap = document.getElementById("storeApp");
@@ -634,11 +670,13 @@ function loadStoreIframe(url) {
     iframe.removeEventListener("load", handleLoad);
     resetStoreIframe();
     setStatus("errorMessage", "error");
+    cancelAutoOpen();
   }
   function handleLoad() {
     if (overlay) overlay.classList.remove("show");
     iframe.removeEventListener("load", handleLoad);
     iframe.removeEventListener("error", handleError);
+    cancelAutoOpen();
   }
   iframe.addEventListener("load", handleLoad);
   iframe.addEventListener("error", handleError, { once: true });
@@ -764,8 +802,12 @@ function renderStore(store, options) {
   }
 
   const shouldAutoOpen = Boolean(opts.autoOpen) && Boolean(embedUrl);
-  if (shouldAutoOpen) openStoreInline();
-  else resetStoreIframe();
+  if (shouldAutoOpen) {
+    openStoreInline();
+  } else {
+    resetStoreIframe();
+    if (opts.autoOpen) cancelAutoOpen();
+  }
 
   card.classList.remove("d-none");
   setMockNoticeVisible(state.usedMock);
@@ -808,11 +850,12 @@ async function handleLookup(event) {
   const raw = input.value.trim();
   if (!raw) {
     setStatus("gasIdRequired", "warning");
-    state.autoOpenTargetId = "";
+    cancelAutoOpen();
     return;
   }
   const normalizedId = raw.toLowerCase();
-  const autoOpenThisLookup = state.autoOpenTargetId && state.autoOpenTargetId === normalizedId;
+  const autoOpenThisLookup = state.autoOpenActive && state.autoOpenTargetId === normalizedId;
+  if (autoOpenThisLookup) state.autoOpenTargetId = "";
   setStatus("verifyingMessage", "info");
   clearStoreDisplay();
   setLoading(true);
@@ -830,8 +873,10 @@ async function handleLookup(event) {
           setStatus("statusSuccess", "success");
         } else if (store && store.verified === false) {
           setStatus("unverifiedMessage", "warning");
+          if (autoOpenThisLookup) cancelAutoOpen();
         } else {
           setStatus("notFoundMessage", "warning");
+          if (autoOpenThisLookup) cancelAutoOpen();
         }
         setMockNoticeVisible(true);
         return;
@@ -844,8 +889,10 @@ async function handleLookup(event) {
           setMockNoticeVisible(true);
         } else if (mock && mock.verified === false) {
           setStatus("unverifiedMessage", "warning");
+          if (autoOpenThisLookup) cancelAutoOpen();
         } else {
           setStatus("notFoundMessage", "warning");
+          if (autoOpenThisLookup) cancelAutoOpen();
         }
         return;
       }
@@ -854,10 +901,12 @@ async function handleLookup(event) {
     const store = response.store;
     if (!store) {
       setStatus("notFoundMessage", "warning");
+      if (autoOpenThisLookup) cancelAutoOpen();
       return;
     }
     if (store.verified === false) {
       setStatus("unverifiedMessage", "warning");
+      if (autoOpenThisLookup) cancelAutoOpen();
       return;
     }
     renderStore(store, { fromMock: false, autoOpen: autoOpenThisLookup });
@@ -872,9 +921,10 @@ async function handleLookup(event) {
       setMockNoticeVisible(true);
     } else {
       setStatus("errorMessage", "error");
+      if (autoOpenThisLookup) cancelAutoOpen();
     }
   } finally {
-    state.autoOpenTargetId = "";
+    if (!autoOpenThisLookup) cancelAutoOpen();
     setLoading(false);
   }
 }
@@ -1108,8 +1158,7 @@ function initStoresDirectory() {
 
 function scheduleAutoLookup(gasId) {
   if (!gasId) return;
-  const normalized = String(gasId || "").trim().toLowerCase();
-  state.autoOpenTargetId = normalized;
+  beginAutoOpen(gasId);
   const input = document.getElementById("gasIdInput");
   if (input) input.value = gasId;
   setTimeout(() => {
