@@ -18,6 +18,7 @@
 - `clasp/07_settings.js` … 設定（基本/営業/休業/サービス/キャンセルポリシー）
 - `clasp/09_cache_utils.js` … CacheService キーと無効化ユーティリティ
 - `clasp/3*.html, 4*.html, 6*.html` … 各画面のHTML（Bootstrap ベース）
+- `clasp/13_store_registry.js` … グローバルポータル用の店舗レジストリAPI
 
 ■ デプロイ手順（clasp）
 1. `clasp login`（未ログインの場合）
@@ -26,7 +27,10 @@
    - `RESERVATION_SS_ID` … 予約スプレッドシートID
    - `MASTER_SS_ID` … マスタスプレッドシートID
    - `CLIENT_ID` … 親サイト側の Google Identity Services の Client ID
-4. 「デプロイ > 新しいデプロイ > 種類: ウェブアプリ」
+4. マスタスプレッドシートに `StoreRegistry`（もしくは「店舗レジストリ」）シートを用意し、以下の列を用意  
+   `GAS ID / 店舗名 / 国 / 提供サービス / ステータス / 認証済み / Iframe URL / 公開URL / タグ / 最終更新`  
+   （最低限 GAS ID と 店舗名 があれば動作。`Iframe URL` 未入力時は `?page=31_index&tenant=<GAS ID>` が自動生成される）
+5. 「デプロイ > 新しいデプロイ > 種類: ウェブアプリ」
    - 実行権限: 適宜（本構成では `USER_DEPLOYING`）
    - アクセス権: 運用要件に合わせる（匿名アクセスの場合はフロントでトークン検証）
 
