@@ -20,3 +20,24 @@ var ADMIN_URL = "https://nakayamaworks.github.io/misemaru_cloud/nakayama_seikots
 window.MISEMARU.DEFAULT_LANG = window.MISEMARU.DEFAULT_LANG || 'ja';
 // Available languages to show in the selector
 window.MISEMARU.AVAILABLE_LANGS = window.MISEMARU.AVAILABLE_LANGS || ['ja','en','zh-CN','zh-TW'];
+<<<<<<< HEAD
+=======
+
+// Registry API endpoint for store verification (set in management console)
+window.MISEMARU.REGISTRY_API = window.MISEMARU.REGISTRY_API || "";
+
+// Optional mock registry entries for local development / demo
+window.MISEMARU.MOCK_REGISTRY = window.MISEMARU.MOCK_REGISTRY || [
+  {
+    gasId: "demo-store",
+    storeName: "みせまる理容室",
+    country: "JP",
+    services: ["ヘアカット", "シェービング"],
+    verifiedAt: "2025-01-01T00:00:00Z",
+    verified: true,
+    iframeUrl: window.MISEMARU.GAS_BASE ? window.MISEMARU.GAS_BASE + "?page=31_index" : "",
+    publicUrl: window.MISEMARU.GAS_BASE ? window.MISEMARU.GAS_BASE + "?page=31_index" : "",
+    tags: ["barber", "tokyo"]
+  }
+];
+>>>>>>> feature-top

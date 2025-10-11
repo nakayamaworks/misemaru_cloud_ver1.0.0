@@ -1,0 +1,25 @@
+初期コミット
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Committer: Nakayama Works <nakayama@nakayamawatarunoMacBook-Air.local>
+#
+# interactive rebase in progress; onto 9fa2d35
+# Last command done (1 command done):
+#    pick 9f13e4d 初期コミット
+# No commands remaining.
+# You are currently rebasing branch 'main' on '9fa2d35'.
+#
+# Changes to be committed:
+#	new file:   .gitignore
+#	modified:   README.md
+#	new file:   nakayama_seikotsuin/admin/index.html
+#	new file:   nakayama_seikotsuin/config.js
+#	new file:   nakayama_seikotsuin/css/misemaru-common.css
+#	new file:   nakayama_seikotsuin/css/theme-admin.css
+#	new file:   nakayama_seikotsuin/css/theme-customer.css
+#	new file:   nakayama_seikotsuin/i18n-client.js
+#	new file:   nakayama_seikotsuin/i18n.js
+#	new file:   nakayama_seikotsuin/index.html
+#
