@@ -509,7 +509,6 @@ function applyTranslations(lang) {
     el.setAttribute("placeholder", t(key, lang));
   });
   updateDocumentTitle(lang);
-  updateEmbedButtonText();
   if (state.statusKey) {
     setStatus(state.statusKey, state.statusTone, { reapply: true });
   }
@@ -589,6 +588,7 @@ function setLoading(isLoading) {
 }
 
 function getStoreIframeElements() {
+  // 埋め込み iframe とその付随要素をまとめて取得する
   const wrap = document.getElementById("storeIframeWrap");
   const iframe = document.getElementById("storeIframe");
   const overlay = document.getElementById("storeIframeOverlay");
@@ -596,6 +596,7 @@ function getStoreIframeElements() {
 }
 
 function resetStoreIframe() {
+  // 埋め込み状態を初期化し、表示をリセットする
   const { wrap, iframe, overlay } = getStoreIframeElements();
   if (iframe) {
     iframe.removeAttribute("src");
@@ -606,6 +607,7 @@ function resetStoreIframe() {
 }
 
 function loadStoreIframe(url) {
+  // GAS 側のページを iframe に読み込み、ロード中はオーバーレイを表示する
   const { wrap, iframe, overlay } = getStoreIframeElements();
   if (!iframe || !wrap) return;
   if (!url) {
