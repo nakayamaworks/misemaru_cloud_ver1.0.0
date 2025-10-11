@@ -489,6 +489,10 @@ function refreshStoreTranslations() {
   if (countryEl) {
     countryEl.textContent = formatCountry(store.country);
   }
+  const appCountryEl = document.getElementById("storeAppCountry");
+  if (appCountryEl) {
+    appCountryEl.textContent = formatCountry(store.country);
+  }
   const verifiedDateEl = document.getElementById("verifiedDate");
   if (verifiedDateEl) {
     const text = formatVerifiedDate(store.verifiedAt);
@@ -589,21 +593,25 @@ function setLoading(isLoading) {
 
 function getStoreIframeElements() {
   // 埋め込み iframe とその付随要素をまとめて取得する
-  const wrap = document.getElementById("storeIframeWrap");
+  const wrap = document.getElementById("storeApp");
   const iframe = document.getElementById("storeIframe");
   const overlay = document.getElementById("storeIframeOverlay");
   return { wrap, iframe, overlay };
 }
 
 function resetStoreIframe() {
-  // 埋め込み状態を初期化し、表示をリセットする
+  // 埋め込み状態を初期化し、フルスクリーン表示を閉じる
   const { wrap, iframe, overlay } = getStoreIframeElements();
   if (iframe) {
     iframe.removeAttribute("src");
     iframe.dataset.src = "";
   }
-  if (wrap) wrap.classList.add("d-none");
+  if (wrap) {
+    wrap.classList.add("d-none");
+    wrap.setAttribute("aria-hidden", "true");
+  }
   if (overlay) overlay.classList.remove("show");
+  document.body.classList.remove("store-view");
 }
 
 function loadStoreIframe(url) {
@@ -615,6 +623,8 @@ function loadStoreIframe(url) {
     return;
   }
   wrap.classList.remove("d-none");
+  wrap.setAttribute("aria-hidden", "false");
+  document.body.classList.add("store-view");
   if (overlay) overlay.classList.add("show");
   const current = iframe.getAttribute("src") || "";
   if (current === url) {
@@ -625,6 +635,8 @@ function loadStoreIframe(url) {
     if (overlay) overlay.classList.remove("show");
     iframe.removeEventListener("error", handleError);
     iframe.removeEventListener("load", handleLoad);
+    resetStoreIframe();
+    setStatus("errorMessage", "error");
   }
   function handleLoad() {
     if (overlay) overlay.classList.remove("show");
@@ -637,12 +649,27 @@ function loadStoreIframe(url) {
   iframe.setAttribute("src", url);
 }
 
+function exitStoreView() {
+  resetStoreIframe();
+}
+
+function openStoreInline() {
+  if (!state.store) return;
+  const url = state.store?.iframeUrl || state.store?.embedUrl || "";
+  if (!url) return;
+  loadStoreIframe(url);
+}
+
 function clearStoreDisplay() {
   state.store = null;
   state.usedMock = false;
   const card = document.getElementById("storeCard");
   if (card) card.classList.add("d-none");
   resetStoreIframe();
+  const appNameEl = document.getElementById("storeAppName");
+  const appCountryEl = document.getElementById("storeAppCountry");
+  if (appNameEl) appNameEl.textContent = "";
+  if (appCountryEl) appCountryEl.textContent = "";
   setMockNoticeVisible(false);
 }
 
@@ -717,6 +744,10 @@ function renderStore(store, options) {
   const dateEl = document.getElementById("verifiedDate");
   const verifiedBadge = document.getElementById("verifiedBadge");
   const externalLink = document.getElementById("storeExternalLink");
+  const openHereBtn = document.getElementById("storeOpenHere");
+  const appNameEl = document.getElementById("storeAppName");
+  const appCountryEl = document.getElementById("storeAppCountry");
+  const appExternalLink = document.getElementById("storeAppOpenExternal");
 
   if (nameEl) nameEl.textContent = name;
   if (countryEl) countryEl.textContent = country;
@@ -733,14 +764,40 @@ function renderStore(store, options) {
       externalLink.href = externalUrl;
       externalLink.classList.remove("disabled");
       externalLink.setAttribute("aria-disabled", "false");
+      externalLink.removeAttribute("tabindex");
     } else {
       externalLink.removeAttribute("href");
       externalLink.classList.add("disabled");
       externalLink.setAttribute("aria-disabled", "true");
+      externalLink.setAttribute("tabindex", "-1");
     }
   }
 
-  loadStoreIframe(embedUrl);
+  if (appExternalLink) {
+    if (externalUrl) {
+      appExternalLink.href = externalUrl;
+      appExternalLink.classList.remove("disabled");
+      appExternalLink.setAttribute("aria-disabled", "false");
+      appExternalLink.removeAttribute("tabindex");
+    } else {
+      appExternalLink.removeAttribute("href");
+      appExternalLink.classList.add("disabled");
+      appExternalLink.setAttribute("aria-disabled", "true");
+      appExternalLink.setAttribute("tabindex", "-1");
+    }
+  }
+  if (openHereBtn) {
+    if (embedUrl) {
+      openHereBtn.disabled = false;
+    } else {
+      openHereBtn.disabled = true;
+    }
+  }
+  if (appNameEl) appNameEl.textContent = name;
+  if (appCountryEl) appCountryEl.textContent = country;
+
+  if (embedUrl) loadStoreIframe(embedUrl);
+  else resetStoreIframe();
 
   card.classList.remove("d-none");
   setMockNoticeVisible(state.usedMock);
@@ -1119,6 +1176,10 @@ function init() {
 
   const form = document.getElementById("storeLookupForm");
   if (form) form.addEventListener("submit", handleLookup);
+  const openHereBtn = document.getElementById("storeOpenHere");
+  if (openHereBtn) openHereBtn.addEventListener("click", openStoreInline);
+  const backBtn = document.getElementById("storeAppBack");
+  if (backBtn) backBtn.addEventListener("click", exitStoreView);
 
   initStoresDirectory();
 
