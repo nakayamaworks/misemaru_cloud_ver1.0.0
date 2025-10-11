@@ -8,11 +8,11 @@ window.MISEMARU = window.MISEMARU || {};
 window.MISEMARU.GSI_CLIENT_ID = "982431897942-epgcq6gn01c19oormn1q8d8gh6csvr54.apps.googleusercontent.com";
 
 // GAS Web App base (exec) URL
-window.MISEMARU.GAS_BASE = "https://script.google.com/macros/s/AKfycbyHtFw5pTkHu-Kf-OjIUIs4GbjiELVYngH0HTDWQaUB2sPrmEHqoY6Y2RltM3cIdA/exec";
+window.MISEMARU.GAS_BASE = "https://script.google.com/macros/s/AKfycbys3tCX1DCOt_mNFL18Mutv9NmLAve7jyjYaOqlFMFa_0w3etqw-FuG49tC-c11Izri/exec";
 
 // Tenant URLs (used by parent UI when child requests to close)
 // Use var to expose as global identifiers for existing code paths
-var HOME_URL = "https://nakayamaworks.github.io/misemaru_cloud/";
+var HOME_URL = "https://nakayamaworks.github.io/misemaru_cloud_ver1.0.0/";
 var ADMIN_URL = window.MISEMARU.GAS_BASE ? window.MISEMARU.GAS_BASE + "?page=32_index_admin" : HOME_URL;
 
 // Language configuration per tenant (client-side only)
