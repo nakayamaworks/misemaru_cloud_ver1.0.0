@@ -98,6 +98,28 @@
       background: #f8fafc;
       box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .25);
     }
+    .store-iframe {
+      position: relative;
+    }
+    .store-iframe .iframe-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      background: rgba(248, 250, 252, .9);
+      transition: opacity .2s ease, visibility .2s ease;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .store-iframe .iframe-overlay.show {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
     .callout-card {
       border-radius: 18px;
       border: none;
@@ -201,9 +223,6 @@
                   <span id="verifiedDate" class="text-muted"></span>
                 </div>
               </div>
-              <button id="toggleEmbedButton" type="button" class="btn btn-outline-secondary btn-sm" disabled>
-                <span data-role="embed-text" data-i18n="embedToggleShow">View here</span>
-              </button>
             </div>
             <p id="storeServices" class="text-muted mt-3 mb-3"></p>
             <div class="d-flex flex-wrap gap-2">
@@ -212,6 +231,9 @@
               </a>
             </div>
             <div id="storeIframeWrap" class="store-iframe mt-3 d-none">
+              <div id="storeIframeOverlay" class="iframe-overlay">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+              </div>
               <iframe id="storeIframe" title="Misemaru Store" loading="lazy" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
             </div>
           </div>

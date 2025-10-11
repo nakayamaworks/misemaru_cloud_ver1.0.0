@@ -9,7 +9,7 @@ const SUPPORTED_LANGS = [
 const DICT = {
   ja: {
     languageStepTitle: "ご利用の言語を選択してください",
-    languageStepDescription: "ミセマルクラウドの店舗ポータルをお好みの言語で表示します。",
+    languageStepDescription: "みせまるクラウドの店舗ポータルをお好みの言語で表示します。",
     languageStepHint: "選択内容はブラウザに保存され、次回から自動で適用されます。",
     languageLabel: "言語",
     startButton: "開始する",
@@ -18,7 +18,7 @@ const DICT = {
     storeAccessTitle: "店舗にアクセス",
     storeAccessDescription: "管理者から共有された GAS ID を入力して認証済み店舗に移動します。",
     gasIdLabel: "店舗 GAS ID",
-    gasIdPlaceholder: "例: demo-store",
+    gasIdPlaceholder: "例: AKfycbwXXXXXXXXXXXXXXX",
     verifyButton: "店舗ページを開く",
     verifyingMessage: "店舗情報を確認しています…",
     notFoundMessage: "該当する店舗が見つかりませんでした。",
@@ -33,7 +33,7 @@ const DICT = {
     embedToggleShow: "このページで表示",
     embedToggleHide: "埋め込みを閉じる",
     createStoreTitle: "店舗を開設する",
-    createStoreDescription: "Misemaru Cloud への登録手順と必要な設定をガイドします。",
+    createStoreDescription: "みせまるクラウドへの登録手順と必要な設定をガイドします。",
     createStoreButton: "店舗開設ガイドへ",
     browseStoresTitle: "認証済み店舗を探す",
     browseStoresDescription: "国・サービスカテゴリから公開中の店舗一覧を参照できます。",
@@ -50,7 +50,7 @@ const DICT = {
     statusSuccess: "認証済み店舗が見つかりました。下の操作から続きを行ってください。",
     verifiedOnLabel: "最終認証日",
     createPageTitle: "店舗開設ガイド",
-    createPageLead: "Misemaru Cloud に店舗を登録するための準備〜公開手順をまとめました。",
+    createPageLead: "みせまるクラウドに店舗を登録するための準備〜公開手順をまとめました。",
     createSectionBasicsTitle: "準備：基本設定",
     createStepAccount: "Google Workspace または Google アカウントを用意し、必要な権限を確認します。",
     createStepSpreadsheet: "テンプレートスプレッドシートをコピーし、スクリプトプロパティ（シート ID / Client ID など）を設定します。",
@@ -63,7 +63,7 @@ const DICT = {
     createContactBody: "不明点は管理者コミュニティまたはサポート窓口 support@misemaru.cloud までお問い合わせください。",
     backToPortal: "ポータルに戻る",
     storesPageTitle: "認証済み店舗一覧",
-    storesPageLead: "公開設定された Misemaru Cloud 店舗を国やサービスカテゴリで検索できます。",
+    storesPageLead: "みせまるクラウド認定店舗を国やサービスカテゴリで検索できます。",
     storesFilterLabel: "国で絞り込む",
     storesFilterAll: "すべて",
     storesTableHeaderName: "店舗名",
@@ -91,7 +91,7 @@ const DICT = {
     storeAccessTitle: "Access a store",
     storeAccessDescription: "Enter the GAS ID provided by the store owner to open a verified tenant.",
     gasIdLabel: "Store GAS ID",
-    gasIdPlaceholder: "Example: demo-store",
+    gasIdPlaceholder: "Example: AKfycbwXXXXXXXXXXXXXXX",
     verifyButton: "Open store",
     verifyingMessage: "Checking store registry…",
     notFoundMessage: "No matching store was found.",
@@ -164,7 +164,7 @@ const DICT = {
     storeAccessTitle: "访问门店",
     storeAccessDescription: "输入门店提供的 GAS ID 以打开已认证的租户。",
     gasIdLabel: "门店 GAS ID",
-    gasIdPlaceholder: "示例: demo-store",
+    gasIdPlaceholder: "示例: AKfycbwXXXXXXXXXXXXXXX",
     verifyButton: "打开门店",
     verifyingMessage: "正在检查门店注册信息…",
     notFoundMessage: "未找到匹配的门店。",
@@ -237,7 +237,7 @@ const DICT = {
     storeAccessTitle: "Acceder a una tienda",
     storeAccessDescription: "Introduce el GAS ID proporcionado por la tienda para abrir un tenant verificado.",
     gasIdLabel: "GAS ID de la tienda",
-    gasIdPlaceholder: "Ejemplo: demo-store",
+    gasIdPlaceholder: "Ejemplo: AKfycbwXXXXXXXXXXXXXXX",
     verifyButton: "Abrir tienda",
     verifyingMessage: "Comprobando el registro de la tienda…",
     notFoundMessage: "No se encontró ninguna tienda con ese identificador.",
@@ -310,7 +310,7 @@ const DICT = {
     storeAccessTitle: "매장 접속",
     storeAccessDescription: "매장 관리자에게 받은 GAS ID 를 입력하면 인증된 테넌트로 이동합니다.",
     gasIdLabel: "매장 GAS ID",
-    gasIdPlaceholder: "예: demo-store",
+    gasIdPlaceholder: "예: AKfycbwXXXXXXXXXXXXXXX",
     verifyButton: "매장 열기",
     verifyingMessage: "매장 등록 정보를 확인하는 중…",
     notFoundMessage: "해당하는 매장을 찾을 수 없습니다.",
@@ -381,7 +381,6 @@ const GAS_PARAM = "gasId";
 const state = {
   lang: "en",
   store: null,
-  embedVisible: false,
   statusKey: null,
   statusTone: "info",
   usedMock: false,
@@ -476,14 +475,6 @@ function updateDocumentTitle(lang) {
   document.documentElement.lang = lang;
 }
 
-function updateEmbedButtonText() {
-  const btn = document.getElementById("toggleEmbedButton");
-  if (!btn) return;
-  const textSpan = btn.querySelector('[data-role="embed-text"]');
-  if (!textSpan) return;
-  textSpan.textContent = state.embedVisible ? t("embedToggleHide") : t("embedToggleShow");
-}
-
 function refreshStoreTranslations() {
   if (!state.store) return;
   const store = state.store;
@@ -503,7 +494,6 @@ function refreshStoreTranslations() {
     const text = formatVerifiedDate(store.verifiedAt);
     verifiedDateEl.textContent = text;
   }
-  updateEmbedButtonText();
 }
 
 function applyTranslations(lang) {
@@ -598,23 +588,60 @@ function setLoading(isLoading) {
   if (input) input.disabled = !!isLoading;
 }
 
-function clearStoreDisplay() {
-  state.store = null;
-  state.embedVisible = false;
-  state.usedMock = false;
-  const card = document.getElementById("storeCard");
-  const iframeWrap = document.getElementById("storeIframeWrap");
+function getStoreIframeElements() {
+  const wrap = document.getElementById("storeIframeWrap");
   const iframe = document.getElementById("storeIframe");
-  const toggleBtn = document.getElementById("toggleEmbedButton");
-  if (card) card.classList.add("d-none");
-  if (iframeWrap) iframeWrap.classList.add("d-none");
+  const overlay = document.getElementById("storeIframeOverlay");
+  return { wrap, iframe, overlay };
+}
+
+function resetStoreIframe() {
+  const { wrap, iframe, overlay } = getStoreIframeElements();
   if (iframe) {
     iframe.removeAttribute("src");
     iframe.dataset.src = "";
   }
-  if (toggleBtn) toggleBtn.disabled = true;
+  if (wrap) wrap.classList.add("d-none");
+  if (overlay) overlay.classList.remove("show");
+}
+
+function loadStoreIframe(url) {
+  const { wrap, iframe, overlay } = getStoreIframeElements();
+  if (!iframe || !wrap) return;
+  if (!url) {
+    resetStoreIframe();
+    return;
+  }
+  wrap.classList.remove("d-none");
+  if (overlay) overlay.classList.add("show");
+  const current = iframe.getAttribute("src") || "";
+  if (current === url) {
+    if (overlay) overlay.classList.remove("show");
+    return;
+  }
+  function handleError() {
+    if (overlay) overlay.classList.remove("show");
+    iframe.removeEventListener("error", handleError);
+    iframe.removeEventListener("load", handleLoad);
+  }
+  function handleLoad() {
+    if (overlay) overlay.classList.remove("show");
+    iframe.removeEventListener("load", handleLoad);
+    iframe.removeEventListener("error", handleError);
+  }
+  iframe.addEventListener("load", handleLoad);
+  iframe.addEventListener("error", handleError, { once: true });
+  iframe.dataset.src = url;
+  iframe.setAttribute("src", url);
+}
+
+function clearStoreDisplay() {
+  state.store = null;
+  state.usedMock = false;
+  const card = document.getElementById("storeCard");
+  if (card) card.classList.add("d-none");
+  resetStoreIframe();
   setMockNoticeVisible(false);
-  updateEmbedButtonText();
 }
 
 function getServicesArray(store) {
@@ -669,12 +696,11 @@ function formatVerifiedDate(dateIso) {
 }
 
 function renderStore(store, options) {
-  const opts = Object.assign({ fromMock: false, preserveEmbed: false }, options || {});
+  const opts = Object.assign({ fromMock: false }, options || {});
   const card = document.getElementById("storeCard");
   if (!card) return;
   state.store = store;
   state.usedMock = !!opts.fromMock;
-  if (!opts.preserveEmbed) state.embedVisible = false;
 
   const name = store.storeName || store.name || store.title || store.gasId || "";
   const country = formatCountry(store.country);
@@ -689,9 +715,6 @@ function renderStore(store, options) {
   const dateEl = document.getElementById("verifiedDate");
   const verifiedBadge = document.getElementById("verifiedBadge");
   const externalLink = document.getElementById("storeExternalLink");
-  const toggleBtn = document.getElementById("toggleEmbedButton");
-  const iframeWrap = document.getElementById("storeIframeWrap");
-  const iframe = document.getElementById("storeIframe");
 
   if (nameEl) nameEl.textContent = name;
   if (countryEl) countryEl.textContent = country;
@@ -715,29 +738,9 @@ function renderStore(store, options) {
     }
   }
 
-  if (toggleBtn) {
-    if (embedUrl) {
-      toggleBtn.disabled = false;
-      toggleBtn.dataset.embedUrl = embedUrl;
-    } else {
-      toggleBtn.disabled = true;
-      toggleBtn.dataset.embedUrl = "";
-    }
-  }
-
-  if (iframe) {
-    if (embedUrl) {
-      iframe.dataset.src = embedUrl;
-      if (!opts.preserveEmbed) iframe.removeAttribute("src");
-    } else {
-      iframe.dataset.src = "";
-      iframe.removeAttribute("src");
-    }
-  }
-  if (iframeWrap && !opts.preserveEmbed) iframeWrap.classList.add("d-none");
+  loadStoreIframe(embedUrl);
 
   card.classList.remove("d-none");
-  updateEmbedButtonText();
   setMockNoticeVisible(state.usedMock);
 }
 
@@ -844,21 +847,6 @@ async function handleLookup(event) {
     setLoading(false);
   }
 }
-
-function toggleEmbed() {
-  const btn = document.getElementById("toggleEmbedButton");
-  const iframeWrap = document.getElementById("storeIframeWrap");
-  const iframe = document.getElementById("storeIframe");
-  if (!btn || !iframeWrap || !iframe || btn.disabled) return;
-  state.embedVisible = !state.embedVisible;
-  iframeWrap.classList.toggle("d-none", !state.embedVisible);
-  if (state.embedVisible && !iframe.getAttribute("src")) {
-    const src = btn.dataset.embedUrl || iframe.dataset.src || "";
-    if (src) iframe.setAttribute("src", src);
-  }
-  updateEmbedButtonText();
-}
-
 function formatDirectoryStatus(store) {
   const status = String(store.status || "").toLowerCase();
   if (status === "pending" || status === "review" || status === "reviewing") return t("storesStatusPending");
@@ -1129,8 +1117,6 @@ function init() {
 
   const form = document.getElementById("storeLookupForm");
   if (form) form.addEventListener("submit", handleLookup);
-  const embedButton = document.getElementById("toggleEmbedButton");
-  if (embedButton) embedButton.addEventListener("click", toggleEmbed);
 
   initStoresDirectory();
 
