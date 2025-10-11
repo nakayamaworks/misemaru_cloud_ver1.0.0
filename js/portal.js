@@ -655,7 +655,7 @@ function exitStoreView() {
 
 function openStoreInline() {
   if (!state.store) return;
-  const url = state.store?.iframeUrl || state.store?.embedUrl || "";
+  const url = resolveEmbedUrl(state.store);
   if (!url) return;
   loadStoreIframe(url);
 }
@@ -724,6 +724,18 @@ function formatVerifiedDate(dateIso) {
   }
 }
 
+function resolveEmbedUrl(store) {
+  if (!store) return "";
+  return (
+    store.iframeUrl ||
+    store.embedUrl ||
+    store.publicUrl ||
+    store.portalUrl ||
+    store.url ||
+    ""
+  );
+}
+
 function renderStore(store, options) {
   const opts = Object.assign({ fromMock: false }, options || {});
   const card = document.getElementById("storeCard");
@@ -736,7 +748,7 @@ function renderStore(store, options) {
   const servicesSummary = formatServices(store);
   const verifiedDateText = formatVerifiedDate(store.verifiedAt);
   const externalUrl = store.publicUrl || store.portalUrl || store.url || store.iframeUrl || "";
-  const embedUrl = store.iframeUrl || store.embedUrl || "";
+  const embedUrl = resolveEmbedUrl(store);
 
   const nameEl = document.getElementById("storeName");
   const countryEl = document.getElementById("storeCountry");
