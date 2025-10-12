@@ -403,6 +403,28 @@ const state = {
 
 const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
 
+function getParamCaseInsensitive(searchParams, name) {
+  if (!searchParams || !name) return "";
+  const target = String(name).toLowerCase();
+  let result = "";
+  searchParams.forEach((value, key) => {
+    if (!result && String(key).toLowerCase() === target) {
+      result = value;
+    }
+  });
+  return result;
+}
+
+function deleteParamCaseInsensitive(searchParams, name) {
+  if (!searchParams || !name) return;
+  const target = String(name).toLowerCase();
+  const keysToDelete = [];
+  searchParams.forEach((_, key) => {
+    if (String(key).toLowerCase() === target) keysToDelete.push(key);
+  });
+  keysToDelete.forEach((key) => searchParams.delete(key));
+}
+
 function resolveLang(input) {
   if (!input) return null;
   const lower = String(input).toLowerCase();
@@ -446,17 +468,17 @@ function updateUrlParam(lang, gasId, options) {
   try {
     const url = new URL(window.location.href);
     if (lang) url.searchParams.set(LANG_PARAM, lang);
-    else url.searchParams.delete(LANG_PARAM);
+    else deleteParamCaseInsensitive(url.searchParams, LANG_PARAM);
     const friendly = String(opts.friendlyId || "").trim();
+    deleteParamCaseInsensitive(url.searchParams, "Id");
+    deleteParamCaseInsensitive(url.searchParams, "id");
+    deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
     if (friendly) {
       url.searchParams.set("id", friendly);
-      url.searchParams.delete(GAS_PARAM);
     } else if (gasId) {
       url.searchParams.set(GAS_PARAM, gasId);
-      url.searchParams.delete("id");
     } else {
-      url.searchParams.delete(GAS_PARAM);
-      url.searchParams.delete("id");
+      deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
     }
     window.history.replaceState({}, "", url.toString());
   } catch (_) {
@@ -1368,10 +1390,12 @@ async function launchFriendlyId(friendlyId) {
 function init() {
   populateLanguageSelects();
   const url = new URL(window.location.href);
-  const urlLang = resolveLang(url.searchParams.get(LANG_PARAM));
+  const langParam = getParamCaseInsensitive(url.searchParams, LANG_PARAM);
+  const friendlyIdParamRaw = getParamCaseInsensitive(url.searchParams, "id") || getParamCaseInsensitive(url.searchParams, "Id");
+  const urlLang = resolveLang(langParam);
   const storedLang = resolveLang(safeLocalStorageGet(LS_KEY));
   const browserLang = resolveLang(navigator.language);
-  const friendlyIdParam = (url.searchParams.get("id") || "").trim();
+  const friendlyIdParam = (friendlyIdParamRaw || "").trim();
   const initialLang = urlLang || storedLang || browserLang || "en";
   const skipLanguageStep = Boolean(urlLang || storedLang || friendlyIdParam);
   if (friendlyIdParam) {
