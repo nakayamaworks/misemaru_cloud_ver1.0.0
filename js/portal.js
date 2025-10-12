@@ -406,6 +406,44 @@ const state = {
 
 const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
 
+function jsonpRequest(urlInput, options) {
+  const opts = Object.assign({ timeout: 10000 }, options || {});
+  const url = urlInput instanceof URL ? urlInput : new URL(urlInput);
+  return new Promise((resolve, reject) => {
+    const callbackName = `__misemaru_jsonp_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+    let script;
+    let timer;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      try { delete window[callbackName]; } catch (_) { /* ignore */ }
+    };
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script = document.createElement("script");
+    script.async = true;
+    url.searchParams.set(opts.callbackParam || "callback", callbackName);
+    script.src = url.toString();
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("JSONP request failed"));
+    };
+    document.head.appendChild(script);
+
+    if (opts.timeout > 0) {
+      timer = setTimeout(() => {
+        cleanup();
+        reject(new Error("JSONP request timed out"));
+      }, opts.timeout);
+    }
+  });
+}
+
 function getParamCaseInsensitive(searchParams, name) {
   if (!searchParams || !name) return "";
   const target = String(name).toLowerCase();
@@ -951,15 +989,12 @@ async function lookupRegistry(query) {
   url.searchParams.set("action", "lookup");
   if (gasId) url.searchParams.set("gasId", gasId);
   if (friendlyId) url.searchParams.set("id", friendlyId);
-  const resp = await fetch(url.toString(), {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-  if (!resp.ok) {
-    return { ok: false, error: "http_error", status: resp.status };
+  let data;
+  try {
+    data = await jsonpRequest(url);
+  } catch (err) {
+    return { ok: false, error: "jsonp_error", detail: String(err || "") };
   }
-  const data = await resp.json();
   const store = data?.store || data?.result || null;
   if (!data?.ok || !store) {
     return { ok: false, error: "not_found" };
@@ -1051,21 +1086,17 @@ async function resolveFriendlyId(friendlyId) {
     } catch (err) {
       console.warn("[portal] friendly lookup (direct) failed", err);
     }
-    try {
-      const listResp = await fetchRegistryList();
-      if (listResp.ok && Array.isArray(listResp.stores)) {
-        const norm = trimmed.toLowerCase();
-        const matchedRaw = listResp.stores.find((item) => {
-          const alias = extractFriendlyId(item);
-          return alias && alias.toLowerCase() === norm;
-        });
-        if (matchedRaw) {
-          const gasId = extractGasId(matchedRaw);
-          if (gasId) return gasId;
-        }
+    const listResp = await fetchRegistryList();
+    if (listResp.ok && Array.isArray(listResp.stores)) {
+      const norm = trimmed.toLowerCase();
+      const matchedRaw = listResp.stores.find((item) => {
+        const alias = extractFriendlyId(item);
+        return alias && alias.toLowerCase() === norm;
+      });
+      if (matchedRaw) {
+        const gasId = extractGasId(matchedRaw);
+        if (gasId) return gasId;
       }
-    } catch (err) {
-      console.warn("[portal] friendly lookup (list) failed", err);
     }
   }
 
@@ -1297,16 +1328,14 @@ async function fetchRegistryList() {
   if (!registryApi) return { ok: false, error: "registry_missing" };
   const url = new URL(registryApi);
   url.searchParams.set("action", "list");
-  const resp = await fetch(url.toString(), {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-  if (!resp.ok) return { ok: false, error: "http_error", status: resp.status };
-  const data = await resp.json();
-  const stores = data?.stores || data?.results || data?.list || [];
-  const updatedAt = data?.updatedAt || data?.timestamp || data?.generatedAt || null;
-  return { ok: true, stores, updatedAt };
+  try {
+    const data = await jsonpRequest(url);
+    const stores = data?.stores || data?.results || data?.list || [];
+    const updatedAt = data?.updatedAt || data?.timestamp || data?.generatedAt || null;
+    return { ok: true, stores, updatedAt };
+  } catch (err) {
+    return { ok: false, error: "jsonp_error", detail: String(err || "") };
+  }
 }
 
 function populateCountryFilterOptions(stores) {

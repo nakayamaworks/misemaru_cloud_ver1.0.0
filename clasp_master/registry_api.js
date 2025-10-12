@@ -135,60 +135,51 @@ function getRegistryEntryByAlias(alias) {
   }) || null;
 }
 
-function formatListResponse(entries) {
-  const updatedAt = entries
-    .map((entry) => entry.verifiedAt)
-    .find((value) => !!value) || "";
-  return createJsonResponse({
-    ok: true,
-    stores: entries,
-    updatedAt,
-    source: "registry",
-  });
-}
-
-function createJsonResponse(payload, statusCode) {
-  const output = ContentService.createTextOutput(JSON.stringify(payload || {}))
-    .setMimeType(ContentService.MimeType.JSON);
-  if (typeof statusCode === "number") {
-    output.setHeader("X-Status", String(statusCode));
-  }
+function makeResponse(payload, callbackName) {
+  const json = JSON.stringify(payload || {});
+  const useJsonp = callbackName && typeof callbackName === "string";
+  const body = useJsonp ? `${callbackName}(${json});` : json;
+  const mime = useJsonp ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON;
+  const output = ContentService.createTextOutput(body).setMimeType(mime);
+  output.setHeader("Access-Control-Allow-Origin", "*");
+  output.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  output.setHeader("Access-Control-Allow-Headers", "Content-Type");
   return output;
 }
 
 function doGet(e) {
-  const action = (e.parameter.action || "").trim();
+  const params = e?.parameter || {};
+  const action = (params.action || "list").trim();
+  const callbackName = (params.callback || params.cb || "").trim();
 
-  if (!action || action === "list") {
-    try {
-      const entries = readRegistryRows();
-      return formatListResponse(entries);
-    } catch (err) {
-      console.error("[REGISTRY][list] error", err);
-      return createJsonResponse({ ok: false, error: "server_error" }, 500);
-    }
-  }
-
-  if (action === "lookup") {
-    const gasId = (e.parameter.gasId || e.parameter.GasId || "").trim();
-    const friendly = (e.parameter.id || e.parameter.ID || e.parameter.friendlyId || "").trim();
-    try {
-      let entry = null;
-      if (gasId) entry = getRegistryEntryByGasId(gasId);
-      if (!entry && friendly) entry = getRegistryEntryByAlias(friendly);
+  try {
+    if (action === "lookup") {
+      const gasId = (params.gasId || params.GasId || "").trim();
+      const friendly = (params.id || params.ID || params.friendlyId || "").trim();
+      const entry = gasId ? getRegistryEntryByGasId(gasId) : getRegistryEntryByAlias(friendly);
       if (!entry) {
-        return createJsonResponse({ ok: false, error: "not_found" }, 404);
+        return makeResponse({ ok: false, error: "not_found" }, callbackName);
       }
-      return createJsonResponse({ ok: true, store: entry, updatedAt: entry.verifiedAt || "", source: "registry" });
-    } catch (err) {
-      console.error("[REGISTRY][lookup] error", err);
-      return createJsonResponse({ ok: false, error: "server_error" }, 500);
+      return makeResponse({ ok: true, store: entry, updatedAt: entry.verifiedAt || "", source: "registry" }, callbackName);
     }
-  }
 
-  return createJsonResponse({ ok: false, error: "unsupported_action" }, 400);
+    if (!action || action === "list") {
+      const entries = readRegistryRows();
+      const updatedAt = entries.find((r) => r.verifiedAt)?.verifiedAt || "";
+      return makeResponse({ ok: true, stores: entries, updatedAt, source: "registry" }, callbackName);
+    }
+
+    return makeResponse({ ok: false, error: "unsupported_action" }, callbackName);
+  } catch (err) {
+    console.error("[REGISTRY] doGet error", err);
+    return makeResponse({ ok: false, error: "server_error" }, callbackName);
+  }
 }
 
-function doPost(e) {
-  return createJsonResponse({ ok: false, error: "write_not_implemented" }, 405);
+function doPost() {
+  return makeResponse({ ok: false, error: "write_not_implemented" });
+}
+
+function doOptions() {
+  return makeResponse({ ok: true });
 }
