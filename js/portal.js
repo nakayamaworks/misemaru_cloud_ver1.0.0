@@ -810,6 +810,7 @@ function normalizeAlias(alias) {
   if (alias == null) return "";
   const trimmed = String(alias).trim();
   if (!trimmed) return "";
+  if (looksLikeGasId(trimmed)) return "";
   return trimmed;
 }
 
@@ -1173,36 +1174,31 @@ function extractGasId(raw) {
 }
 
 function extractFriendlyId(raw) {
-  let candidate = "";
-  const seen = new Set();
-  const add = (value) => {
-    if (value == null) return;
-    const str = String(value).trim();
-    if (!str || seen.has(str)) return;
-    seen.add(str);
-    if (!looksLikeGasId(str) && !candidate) candidate = str;
-  };
-  const fields = [
-    raw?.alias,
-    raw?.friendlyId,
-    raw?.storeId,
-    raw?.storeAlias,
-    raw?.storeSlug,
-    raw?.slug,
-    raw?.customId,
-    raw?.shortId,
-    raw?.id,
-    raw?.ID,
+  if (!raw) return "";
+  const candidates = [
+    raw.alias,
+    raw.Alias,
+    raw.friendlyId,
+    raw.FriendlyId,
+    raw.friendlyID,
+    raw.storeId,
+    raw.storeID,
+    raw.storeAlias,
+    raw.storeSlug,
+    raw.slug,
+    raw.customId,
+    raw.shortId,
+    raw.shortID,
+    raw.id,
+    raw.ID,
   ];
-  fields.forEach(add);
-  if (!candidate && raw && typeof raw === "object") {
-    Object.values(raw).forEach(add);
+  for (const candidate of candidates) {
+    const str = String(candidate || "").trim();
+    if (!str) continue;
+    if (looksLikeGasId(str)) continue;
+    return str;
   }
-  if (!candidate && Array.isArray(raw)) {
-    raw.forEach(add);
-  }
-  if (candidate && looksLikeGasId(candidate)) return "";
-  return candidate;
+  return "";
 }
 
 function normalizeStoreRecord(raw) {
