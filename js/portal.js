@@ -774,6 +774,21 @@ function resolveEmbedUrl(store) {
   );
 }
 
+function resolveStoreAlias(store) {
+  if (!store || typeof store !== "object") return "";
+  if (typeof store.alias === "string" && store.alias.trim()) return store.alias.trim();
+  if (typeof store.friendlyId === "string" && store.friendlyId.trim()) return store.friendlyId.trim();
+  return extractFriendlyId(store);
+}
+
+function updateUrlForStore(gasId, options) {
+  const opts = Object.assign({ alias: "", autoOpen: false }, options || {});
+  const alias = String(opts.alias || "").trim();
+  const friendly = alias || (opts.autoOpen ? state.activeFriendlyId : "");
+  updateUrlParam(state.lang, gasId, { friendlyId: friendly });
+  state.activeFriendlyId = friendly;
+}
+
 function renderStore(store, options) {
   const opts = Object.assign({ fromMock: false }, options || {});
   const card = document.getElementById("storeCard");
@@ -956,8 +971,6 @@ async function handleLookup(event) {
   state.usedMock = false;
   try {
     const gasId = raw;
-    const friendlyForUrl = autoOpenThisLookup ? state.activeFriendlyId : "";
-    updateUrlParam(state.lang, gasId, { friendlyId: friendlyForUrl });
     let response = await lookupRegistry(gasId);
     if (!response.ok) {
       if (response.error === "registry_missing") {
@@ -965,6 +978,8 @@ async function handleLookup(event) {
         const store = lookupMock(gasId);
         if (store && store.verified !== false) {
           renderStore(store, { fromMock: true, autoOpen: autoOpenThisLookup });
+          const alias = resolveStoreAlias(store);
+          updateUrlForStore(gasId, { alias, autoOpen: autoOpenThisLookup });
           setStatus("statusSuccess", "success");
         } else if (store && store.verified === false) {
           setStatus("unverifiedMessage", "warning");
@@ -980,6 +995,8 @@ async function handleLookup(event) {
         const mock = lookupMock(gasId);
         if (mock && mock.verified !== false) {
           renderStore(mock, { fromMock: true, autoOpen: autoOpenThisLookup });
+          const alias = resolveStoreAlias(mock);
+          updateUrlForStore(gasId, { alias, autoOpen: autoOpenThisLookup });
           setStatus("statusSuccess", "success");
           setMockNoticeVisible(true);
         } else if (mock && mock.verified === false) {
@@ -1005,6 +1022,8 @@ async function handleLookup(event) {
       return;
     }
     renderStore(store, { fromMock: false, autoOpen: autoOpenThisLookup });
+    const alias = resolveStoreAlias(store);
+    updateUrlForStore(gasId, { alias, autoOpen: autoOpenThisLookup });
     setStatus("statusSuccess", "success");
     setMockNoticeVisible(false);
   } catch (err) {
@@ -1012,6 +1031,9 @@ async function handleLookup(event) {
     const mock = lookupMock(raw);
     if (mock) {
       renderStore(mock, { fromMock: true, autoOpen: autoOpenThisLookup });
+      const gasIdFromMock = extractGasId(mock) || raw;
+      const alias = resolveStoreAlias(mock);
+      updateUrlForStore(gasIdFromMock, { alias, autoOpen: autoOpenThisLookup });
       setStatus("statusSuccess", "success");
       setMockNoticeVisible(true);
     } else {
