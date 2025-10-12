@@ -139,12 +139,12 @@ function makeResponse(payload, callbackName) {
   const json = JSON.stringify(payload || {});
   const useJsonp = callbackName && typeof callbackName === "string";
   const body = useJsonp ? `${callbackName}(${json});` : json;
-  const mime = useJsonp ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON;
-  const output = ContentService.createTextOutput(body).setMimeType(mime);
-  output.setHeader("Access-Control-Allow-Origin", "*");
-  output.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  output.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  return output;
+  const mime = useJsonp
+    ? ContentService.MimeType.JAVASCRIPT
+    : ContentService.MimeType.JSON;
+
+  // ✅ TextOutputにはsetHeaderが存在しないので削除
+  return ContentService.createTextOutput(body).setMimeType(mime);
 }
 
 function doGet(e) {

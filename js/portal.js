@@ -17,8 +17,8 @@ const DICT = {
     heroLead: "世界中の認定店舗に安全にアクセスし、予約・店舗管理のエコシステムを利用できます。",
     storeAccessTitle: "店舗にアクセス",
     storeAccessDescription: "管理者から共有された GAS ID を入力して認証済み店舗に移動します。",
-    gasIdLabel: "店舗 GAS ID",
-    gasIdPlaceholder: "例: AKfycbwXXXXXXXXXXXXXXX",
+    gasIdLabel: "店舗 WebアプリURL",
+    gasIdPlaceholder: "例: https://script.google.com/macros/s/AKfycbwXXXXXXXXXXXXXXX/exec",
     verifyButton: "店舗を確認",
     verifyingMessage: "店舗情報を確認しています…",
     notFoundMessage: "該当する店舗が見つかりませんでした。",
@@ -46,7 +46,7 @@ const DICT = {
     featureAdmin: "管理者向けの認証ワークフローとダッシュボード",
     registryMissingMessage: "レジストリ API が設定されていないため、モックデータで動作しています。",
     mockWarning: "デモモードで表示しています。実際の店舗情報とは異なる場合があります。",
-    gasIdRequired: "店舗 GAS ID を入力してください。",
+    gasIdRequired: "店舗の WebアプリURL を入力してください。",
     statusSuccess: "認証済み店舗が見つかりました。下の操作から続きを行ってください。",
     verifiedOnLabel: "最終認証日",
     loadingStoreMessage: "店舗情報を取得しています…",
@@ -91,8 +91,8 @@ const DICT = {
     heroLead: "Securely reach every verified Misemaru Cloud store worldwide and access the reservation ecosystem.",
     storeAccessTitle: "Access a store",
     storeAccessDescription: "Enter the GAS ID provided by the store owner to open a verified tenant.",
-    gasIdLabel: "Store GAS ID",
-    gasIdPlaceholder: "Example: AKfycbwXXXXXXXXXXXXXXX",
+    gasIdLabel: "Store Web App URL",
+    gasIdPlaceholder: "Example: https://script.google.com/macros/s/AKfycbwXXXXXXXXXXXXXXX/exec",
     verifyButton: "Check store",
     verifyingMessage: "Checking store registry…",
     notFoundMessage: "No matching store was found.",
@@ -120,7 +120,7 @@ const DICT = {
     featureAdmin: "Lightweight admin dashboard for store verification",
     registryMissingMessage: "Registry API is not configured, using mock data for preview.",
     mockWarning: "Demo mode: the information shown may differ from production.",
-    gasIdRequired: "Please enter a store GAS ID.",
+    gasIdRequired: "Please enter the store Web App URL.",
     statusSuccess: "Verified store found. Opening options below.",
     verifiedOnLabel: "Verified on",
     loadingStoreMessage: "Fetching store experience…",
@@ -165,8 +165,8 @@ const DICT = {
     heroLead: "安全访问全球所有已认证的 Misemaru Cloud 门店，并使用预约生态系统。",
     storeAccessTitle: "访问门店",
     storeAccessDescription: "输入门店提供的 GAS ID 以打开已认证的租户。",
-    gasIdLabel: "门店 GAS ID",
-    gasIdPlaceholder: "示例: AKfycbwXXXXXXXXXXXXXXX",
+    gasIdLabel: "门店 Web 应用 URL",
+    gasIdPlaceholder: "示例: https://script.google.com/macros/s/AKfycbwXXXXXXXXXXXXXXX/exec",
     verifyButton: "查看门店",
     verifyingMessage: "正在检查门店注册信息…",
     notFoundMessage: "未找到匹配的门店。",
@@ -194,7 +194,7 @@ const DICT = {
     featureAdmin: "简易的门店认证管理控制台",
     registryMissingMessage: "尚未配置注册 API，当前使用演示数据。",
     mockWarning: "演示模式：显示的信息可能与正式环境不同。",
-    gasIdRequired: "请输入门店 GAS ID。",
+    gasIdRequired: "请输入门店的 Web 应用 URL。",
     statusSuccess: "已找到认证门店。请使用下方选项继续。",
     verifiedOnLabel: "认证日期",
     loadingStoreMessage: "正在获取门店页面…",
@@ -239,8 +239,8 @@ const DICT = {
     heroLead: "Accede de forma segura a todas las tiendas verificadas de Misemaru Cloud en el mundo y utiliza el ecosistema de reservas.",
     storeAccessTitle: "Acceder a una tienda",
     storeAccessDescription: "Introduce el GAS ID proporcionado por la tienda para abrir un tenant verificado.",
-    gasIdLabel: "GAS ID de la tienda",
-    gasIdPlaceholder: "Ejemplo: AKfycbwXXXXXXXXXXXXXXX",
+    gasIdLabel: "URL de la aplicación web de la tienda",
+    gasIdPlaceholder: "Ejemplo: https://script.google.com/macros/s/AKfycbwXXXXXXXXXXXXXXX/exec",
     verifyButton: "Ver tienda",
     verifyingMessage: "Comprobando el registro de la tienda…",
     notFoundMessage: "No se encontró ninguna tienda con ese identificador.",
@@ -268,7 +268,7 @@ const DICT = {
     featureAdmin: "Panel ligero para verificar nuevas tiendas",
     registryMissingMessage: "La API del registro no está configurada; se muestran datos de demostración.",
     mockWarning: "Modo demo: la información mostrada puede diferir de la versión oficial.",
-    gasIdRequired: "Introduce el GAS ID de la tienda.",
+    gasIdRequired: "Introduce la URL de la aplicación web de la tienda.",
     statusSuccess: "Tienda verificada encontrada. Usa las opciones siguientes para continuar.",
     verifiedOnLabel: "Verificada el",
     loadingStoreMessage: "Cargando la experiencia de la tienda…",
@@ -313,8 +313,8 @@ const DICT = {
     heroLead: "전 세계 인증된 Misemaru Cloud 매장에 안전하게 접속하고 예약 생태계를 이용하세요.",
     storeAccessTitle: "매장 접속",
     storeAccessDescription: "매장 관리자에게 받은 GAS ID 를 입력하면 인증된 테넌트로 이동합니다.",
-    gasIdLabel: "매장 GAS ID",
-    gasIdPlaceholder: "예: AKfycbwXXXXXXXXXXXXXXX",
+    gasIdLabel: "매장 Web 앱 URL",
+    gasIdPlaceholder: "예: https://script.google.com/macros/s/AKfycbwXXXXXXXXXXXXXXX/exec",
     verifyButton: "매장 확인",
     verifyingMessage: "매장 등록 정보를 확인하는 중…",
     notFoundMessage: "해당하는 매장을 찾을 수 없습니다.",
@@ -342,7 +342,7 @@ const DICT = {
     featureAdmin: "매장 인증용 경량 관리자 대시보드",
     registryMissingMessage: "등록 API가 설정되지 않아 데모 데이터로 동작합니다.",
     mockWarning: "데모 모드: 표시되는 정보는 실제와 다를 수 있습니다.",
-    gasIdRequired: "매장 GAS ID 를 입력하세요.",
+    gasIdRequired: "매장의 Web 앱 URL을 입력하세요.",
     statusSuccess: "인증된 매장을 찾았습니다. 아래 옵션으로 계속 진행하세요.",
     verifiedOnLabel: "인증 날짜",
     loadingStoreMessage: "매장 페이지를 불러오는 중…",
@@ -525,6 +525,7 @@ function updateUrlParam(lang, gasId, options) {
   const opts = Object.assign({ friendlyId: "" }, options || {});
   try {
     const url = new URL(window.location.href);
+    const sanitizedGasId = sanitizeGasId(gasId);
     if (lang) url.searchParams.set(LANG_PARAM, lang);
     else deleteParamCaseInsensitive(url.searchParams, LANG_PARAM);
     const friendly = String(opts.friendlyId || "").trim();
@@ -533,8 +534,8 @@ function updateUrlParam(lang, gasId, options) {
     deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
     if (friendly) {
       url.searchParams.set("id", friendly);
-    } else if (gasId) {
-      url.searchParams.set(GAS_PARAM, gasId);
+    } else if (sanitizedGasId) {
+      url.searchParams.set(GAS_PARAM, sanitizedGasId);
     } else {
       deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
     }
@@ -1058,7 +1059,7 @@ function resolveFriendlyIdFromConfig(friendlyId) {
 async function resolveFriendlyId(friendlyId) {
   const trimmed = String(friendlyId || "").trim();
   if (!trimmed) return "";
-  if (looksLikeGasId(trimmed)) return trimmed;
+  if (looksLikeGasId(trimmed)) return sanitizeGasId(trimmed);
   const directoryMatch = findAliasInDirectoryByAlias(trimmed);
   if (directoryMatch) {
     const gas = extractGasId(directoryMatch);
@@ -1130,7 +1131,8 @@ async function handleLookup(event) {
     cancelAutoOpen();
     return;
   }
-  const normalizedId = raw.toLowerCase();
+  const gasId = sanitizeGasId(raw);
+  const normalizedId = gasId.toLowerCase();
   const autoOpenThisLookup = state.autoOpenActive && state.autoOpenTargetId === normalizedId;
   if (autoOpenThisLookup) state.autoOpenTargetId = "";
   else state.activeFriendlyId = "";
@@ -1139,7 +1141,6 @@ async function handleLookup(event) {
   setLoading(true);
   state.usedMock = false;
   try {
-    const gasId = raw;
     let response = await lookupRegistry({ gasId });
     if (!response.ok) {
       if (response.error === "registry_missing") {
@@ -1241,8 +1242,16 @@ function formatDirectoryStatus(store) {
   return t("storesStatusVerified");
 }
 
-function looksLikeGasId(value) {
+function sanitizeGasId(value) {
   const str = String(value || "").trim();
+  if (!str) return "";
+  const match = str.match(/AK[A-Za-z0-9_-]{10,}/i);
+  if (match) return match[0];
+  return str;
+}
+
+function looksLikeGasId(value) {
+  const str = sanitizeGasId(value);
   return /^AK/i.test(str) && str.length > 10;
 }
 
@@ -1253,9 +1262,11 @@ function extractGasId(raw) {
     if (candidate) return;
     if (value == null) return;
     const str = String(value).trim();
-    if (!str || seen.has(str)) return;
-    seen.add(str);
-    if (looksLikeGasId(str)) candidate = str;
+    if (!str) return;
+    const sanitized = sanitizeGasId(str);
+    if (!looksLikeGasId(sanitized) || seen.has(sanitized)) return;
+    seen.add(sanitized);
+    candidate = sanitized;
   };
   const fields = [
     raw?.gasId,
@@ -1567,10 +1578,11 @@ function initStoresDirectory() {
 }
 
 function scheduleAutoLookup(gasId) {
-  if (!gasId) return;
-  beginAutoOpen(gasId);
+  const sanitized = sanitizeGasId(gasId);
+  if (!sanitized) return;
+  beginAutoOpen(sanitized);
   const input = document.getElementById("gasIdInput");
-  if (input) input.value = gasId;
+  if (input) input.value = sanitized;
   setTimeout(() => {
     const form = document.getElementById("storeLookupForm");
     if (form) handleLookup(new Event("submit", { cancelable: true, bubbles: true }));

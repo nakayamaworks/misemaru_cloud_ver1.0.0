@@ -3,3 +3,5 @@
 clasp/
 .clasp*.json
 deploy.sh
+clasp_master/
+.clasp_master*.json
