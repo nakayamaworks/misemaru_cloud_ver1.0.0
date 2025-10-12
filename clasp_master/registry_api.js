@@ -88,7 +88,8 @@ function normalizeRegistryRow(row, COL, baseUrl) {
   const gasId = pickCell(row, COL.GAS_ID);
   if (!gasId) return null;
 
-  const fallbackUrl = baseUrl ? `${baseUrl}?page=31_index` : "";
+  const fallbackUrl = gasId ? `https://script.google.com/macros/s/${gasId}/exec` : (baseUrl ? `${baseUrl}?page=31_index` : "");
+  const fallbackIframeUrl = fallbackUrl ? `${fallbackUrl}?page=31_index` : "";
   return {
     gasId,
     ID: pickCell(row, COL.ID),
@@ -98,7 +99,7 @@ function normalizeRegistryRow(row, COL, baseUrl) {
     tags: splitMultiValue(pickCell(row, COL.TAGS)),
     status: String(pickCell(row, COL.STATUS) || "").toLowerCase(),
     verified: parseBool(pickCell(row, COL.VERIFIED)),
-    iframeUrl: pickCell(row, COL.IFRAME_URL) || fallbackUrl,
+    iframeUrl: pickCell(row, COL.IFRAME_URL) || fallbackIframeUrl || fallbackUrl,
     publicUrl: pickCell(row, COL.PUBLIC_URL) || fallbackUrl,
     verifiedAt: pickCell(row, COL.UPDATED_AT),
   };
