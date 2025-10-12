@@ -803,6 +803,9 @@ function resolveStoreAlias(store) {
   if (!store || typeof store !== "object") return "";
   if (typeof store.alias === "string" && store.alias.trim()) return store.alias.trim();
   if (typeof store.friendlyId === "string" && store.friendlyId.trim()) return store.friendlyId.trim();
+  if (typeof store.friendlyID === "string" && store.friendlyID.trim()) return store.friendlyID.trim();
+  if (typeof store.ID === "string" && store.ID.trim()) return store.ID.trim();
+  if (typeof store.Id === "string" && store.Id.trim()) return store.Id.trim();
   return extractFriendlyId(store);
 }
 
