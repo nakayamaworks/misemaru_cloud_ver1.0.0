@@ -1061,6 +1061,8 @@ function extractGasId(raw) {
   const candidates = [
     raw?.gasId,
     raw?.gasid,
+    raw?.GasId,
+    raw?.GAS_ID,
     raw?.scriptId,
     raw?.executionId,
     raw?.deploymentId,
@@ -1070,6 +1072,7 @@ function extractGasId(raw) {
     raw?.publicUrl,
     raw?.url,
     raw?.id,
+    raw?.ID,
   ];
   for (const candidate of candidates) {
     const str = String(candidate || "").trim();
@@ -1090,6 +1093,7 @@ function extractFriendlyId(raw) {
     raw?.customId,
     raw?.shortId,
     raw?.id,
+    raw?.ID,
   ];
   for (const candidate of candidates) {
     const str = String(candidate || "").trim();
