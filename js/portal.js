@@ -392,6 +392,9 @@ const state = {
   autoOpenTargetId: "",
   autoOpenActive: false,
   activeFriendlyId: "",
+  pendingFriendlyId: "",
+  friendlyRetryCount: 0,
+  lastFriendlyRequested: "",
   directoryStores: [],
   directoryFilter: "",
   directoryCountries: [],
@@ -803,12 +806,49 @@ function resolveStoreAlias(store) {
   return extractFriendlyId(store);
 }
 
+function normalizeAlias(alias) {
+  if (alias == null) return "";
+  const trimmed = String(alias).trim();
+  if (!trimmed) return "";
+  return trimmed;
+}
+
+function findAliasInDirectoryByGasId(gasId) {
+  const norm = String(gasId || "").toLowerCase();
+  if (!norm) return "";
+  const match = state.directoryStores.find((item) => String(item.gasId || "").toLowerCase() === norm);
+  if (match && match.alias) return normalizeAlias(match.alias);
+  return "";
+}
+
+function findAliasInDirectoryByAlias(alias) {
+  const norm = String(alias || "").toLowerCase();
+  if (!norm) return null;
+  return state.directoryStores.find((item) => String(item.alias || "").toLowerCase() === norm) || null;
+}
+
+function resolveAliasFromConfigByGasId(gasId) {
+  const map = (window.MISEMARU && window.MISEMARU.FRIENDLY_IDS) || null;
+  if (!map || typeof map !== "object") return "";
+  const norm = String(gasId || "").toLowerCase();
+  if (!norm) return "";
+  for (const [alias, mapped] of Object.entries(map)) {
+    if (String(mapped || "").toLowerCase() === norm) return normalizeAlias(alias);
+  }
+  return "";
+}
+
 function updateUrlForStore(gasId, options) {
   const opts = Object.assign({ alias: "", autoOpen: false }, options || {});
-  const alias = String(opts.alias || "").trim();
-  const friendly = alias || (opts.autoOpen ? state.activeFriendlyId : "");
-  updateUrlParam(state.lang, gasId, { friendlyId: friendly });
-  state.activeFriendlyId = friendly;
+  let alias = normalizeAlias(opts.alias);
+  const fallbackAlias = normalizeAlias(state.activeFriendlyId);
+  if (!alias) alias = findAliasInDirectoryByGasId(gasId);
+  if (!alias) alias = resolveAliasFromConfigByGasId(gasId);
+  if (!alias && opts.autoOpen && fallbackAlias) alias = fallbackAlias;
+  if (!alias && opts.autoOpen) alias = normalizeAlias(state.pendingFriendlyId);
+  if (alias && looksLikeGasId(alias)) alias = "";
+  updateUrlParam(state.lang, gasId, { friendlyId: alias });
+  state.activeFriendlyId = alias;
 }
 
 function renderStore(store, options) {
@@ -924,6 +964,12 @@ async function resolveFriendlyId(friendlyId) {
   const trimmed = String(friendlyId || "").trim();
   if (!trimmed) return "";
   if (looksLikeGasId(trimmed)) return trimmed;
+  const directoryMatch = findAliasInDirectoryByAlias(trimmed);
+  if (directoryMatch) {
+    const gas = extractGasId(directoryMatch);
+    if (gas) return gas;
+    if (directoryMatch.gasId) return directoryMatch.gasId;
+  }
   const configMatch = resolveFriendlyIdFromConfig(trimmed);
   if (configMatch) return configMatch;
 
@@ -934,6 +980,16 @@ async function resolveFriendlyId(friendlyId) {
   }
 
   if (registryApi) {
+    try {
+      const attempt = await lookupRegistry(trimmed);
+      if (attempt.ok && attempt.store) {
+        const store = attempt.store;
+        const gasId = extractGasId(store) || store.gasId || store.GAS_ID || "";
+        if (gasId && looksLikeGasId(gasId)) return gasId;
+      }
+    } catch (err) {
+      /* ignore */
+    }
     try {
       const url = new URL(registryApi);
       url.searchParams.set("action", "lookup");
@@ -1080,7 +1136,17 @@ function looksLikeGasId(value) {
 }
 
 function extractGasId(raw) {
-  const candidates = [
+  let candidate = "";
+  const seen = new Set();
+  const add = (value) => {
+    if (candidate) return;
+    if (value == null) return;
+    const str = String(value).trim();
+    if (!str || seen.has(str)) return;
+    seen.add(str);
+    if (looksLikeGasId(str)) candidate = str;
+  };
+  const fields = [
     raw?.gasId,
     raw?.gasid,
     raw?.GasId,
@@ -1096,16 +1162,27 @@ function extractGasId(raw) {
     raw?.id,
     raw?.ID,
   ];
-  for (const candidate of candidates) {
-    const str = String(candidate || "").trim();
-    if (!str) continue;
-    if (looksLikeGasId(str)) return str;
+  fields.forEach(add);
+  if (!candidate && raw && typeof raw === "object") {
+    Object.values(raw).forEach(add);
   }
-  return "";
+  if (!candidate && Array.isArray(raw)) {
+    raw.forEach(add);
+  }
+  return candidate;
 }
 
 function extractFriendlyId(raw) {
-  const candidates = [
+  let candidate = "";
+  const seen = new Set();
+  const add = (value) => {
+    if (value == null) return;
+    const str = String(value).trim();
+    if (!str || seen.has(str)) return;
+    seen.add(str);
+    if (!looksLikeGasId(str) && !candidate) candidate = str;
+  };
+  const fields = [
     raw?.alias,
     raw?.friendlyId,
     raw?.storeId,
@@ -1117,12 +1194,15 @@ function extractFriendlyId(raw) {
     raw?.id,
     raw?.ID,
   ];
-  for (const candidate of candidates) {
-    const str = String(candidate || "").trim();
-    if (!str) continue;
-    if (!looksLikeGasId(str)) return str;
+  fields.forEach(add);
+  if (!candidate && raw && typeof raw === "object") {
+    Object.values(raw).forEach(add);
   }
-  return "";
+  if (!candidate && Array.isArray(raw)) {
+    raw.forEach(add);
+  }
+  if (candidate && looksLikeGasId(candidate)) return "";
+  return candidate;
 }
 
 function normalizeStoreRecord(raw) {
@@ -1326,12 +1406,45 @@ async function loadDirectoryData() {
         notice.classList.remove("d-none");
       }
     }
-    state.directoryStores = (rawStores || []).map(normalizeStoreRecord);
+    state.directoryStores = (rawStores || [])
+      .map(normalizeStoreRecord)
+      .filter((item) => {
+        if (!item) return false;
+        if (item.gasId && looksLikeGasId(item.gasId)) return true;
+        if (item.alias && !looksLikeGasId(item.alias)) return true;
+        return false;
+      });
+    if (state.store) {
+      const currentGasId = state.store.gasId || extractGasId(state.store);
+      const aliasFromDirectory = findAliasInDirectoryByGasId(currentGasId);
+      if (aliasFromDirectory && aliasFromDirectory !== state.activeFriendlyId) {
+        updateUrlForStore(currentGasId, { alias: aliasFromDirectory, autoOpen: false });
+      }
+    }
     populateCountryFilterOptions(state.directoryStores);
     refreshDirectory();
+    if (state.pendingFriendlyId) {
+      const pending = state.pendingFriendlyId;
+      state.pendingFriendlyId = "";
+      state.friendlyRetryCount = (state.friendlyRetryCount || 0) + 1;
+      if (state.friendlyRetryCount <= 3) {
+        setTimeout(() => launchFriendlyId(pending), 50);
+      } else {
+        cancelAutoOpen();
+        setStatus("notFoundMessage", "warning");
+      }
+    } else {
+      state.friendlyRetryCount = 0;
+    }
   } catch (error) {
     console.warn("[portal] directory load error", error);
     setDirectoryError();
+    if (state.pendingFriendlyId) {
+      cancelAutoOpen();
+      setStatus("errorMessage", "error");
+      state.pendingFriendlyId = "";
+      state.friendlyRetryCount = 0;
+    }
   } finally {
     setDirectoryLoading(false);
   }
@@ -1363,15 +1476,31 @@ function scheduleAutoLookup(gasId) {
 async function launchFriendlyId(friendlyId) {
   const trimmed = String(friendlyId || "").trim();
   if (!trimmed) return;
+  const alreadyActive = state.autoOpenActive;
+  if (state.lastFriendlyRequested !== trimmed) {
+    state.friendlyRetryCount = 0;
+  }
+  state.lastFriendlyRequested = trimmed;
   state.activeFriendlyId = trimmed;
-  beginAutoOpen(trimmed);
+  state.pendingFriendlyId = "";
+  if (!alreadyActive) beginAutoOpen(trimmed);
+  if (!state.directoryStores.length && state.directoryLoading) {
+    state.pendingFriendlyId = trimmed;
+    return;
+  }
   try {
     const gasId = await resolveFriendlyId(trimmed);
     if (!gasId) {
+      if (state.directoryLoading) {
+        state.pendingFriendlyId = trimmed;
+        return;
+      }
       cancelAutoOpen();
       setStatus("notFoundMessage", "warning");
       return;
     }
+    state.pendingFriendlyId = "";
+    state.friendlyRetryCount = 0;
     state.autoOpenTargetId = String(gasId).toLowerCase();
     state.autoOpenActive = true;
     const input = document.getElementById("gasIdInput");
@@ -1380,6 +1509,7 @@ async function launchFriendlyId(friendlyId) {
       const form = document.getElementById("storeLookupForm");
       if (form) handleLookup(new Event("submit", { cancelable: true, bubbles: true }));
     }, 120);
+    updateUrlForStore(gasId, { alias: trimmed, autoOpen: true });
   } catch (err) {
     console.warn("[portal] friendly launch failed", err);
     cancelAutoOpen();
@@ -1436,7 +1566,7 @@ function init() {
     showLanguageStep();
   }
 
-  const gasIdParam = url.searchParams.get(GAS_PARAM);
+  const gasIdParam = getParamCaseInsensitive(url.searchParams, GAS_PARAM);
   if (gasIdParam && skipLanguageStep) {
     scheduleAutoLookup(gasIdParam);
   } else if (friendlyIdParam) {
