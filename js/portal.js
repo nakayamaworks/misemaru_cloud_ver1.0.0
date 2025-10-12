@@ -842,6 +842,33 @@ function resolveAliasFromConfigByGasId(gasId) {
   return "";
 }
 
+function waitForDirectoryData(timeoutMs = 3000) {
+  if (state.directoryStores.length) return Promise.resolve();
+  if (!state.directoryLoading) return Promise.resolve();
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (state.directoryStores.length || !state.directoryLoading || Date.now() - start > timeoutMs) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 100);
+  });
+}
+
+async function resolveAliasForGasId(gasId) {
+  const norm = String(gasId || "").toLowerCase();
+  if (!norm) return "";
+  let alias = findAliasInDirectoryByGasId(gasId);
+  if (alias) return alias;
+  alias = resolveAliasFromConfigByGasId(gasId);
+  if (alias) return alias;
+  await waitForDirectoryData();
+  alias = findAliasInDirectoryByGasId(gasId);
+  if (alias) return alias;
+  return "";
+}
+
 function updateUrlForStore(gasId, options) {
   const opts = Object.assign({ alias: "", autoOpen: false }, options || {});
   let alias = normalizeAlias(opts.alias);
@@ -1062,6 +1089,11 @@ async function handleLookup(event) {
           renderStore(store, { fromMock: true, autoOpen: autoOpenThisLookup });
           const alias = resolveStoreAlias(store);
           updateUrlForStore(gasId, { alias, autoOpen: autoOpenThisLookup });
+          if (!alias) {
+            resolveAliasForGasId(gasId).then((resolved) => {
+              if (resolved) updateUrlForStore(gasId, { alias: resolved, autoOpen: autoOpenThisLookup });
+            });
+          }
           setStatus("statusSuccess", "success");
         } else if (store && store.verified === false) {
           setStatus("unverifiedMessage", "warning");
@@ -1079,6 +1111,11 @@ async function handleLookup(event) {
           renderStore(mock, { fromMock: true, autoOpen: autoOpenThisLookup });
           const alias = resolveStoreAlias(mock);
           updateUrlForStore(gasId, { alias, autoOpen: autoOpenThisLookup });
+          if (!alias) {
+            resolveAliasForGasId(gasId).then((resolved) => {
+              if (resolved) updateUrlForStore(gasId, { alias: resolved, autoOpen: autoOpenThisLookup });
+            });
+          }
           setStatus("statusSuccess", "success");
           setMockNoticeVisible(true);
         } else if (mock && mock.verified === false) {
@@ -1106,6 +1143,11 @@ async function handleLookup(event) {
     renderStore(store, { fromMock: false, autoOpen: autoOpenThisLookup });
     const alias = resolveStoreAlias(store);
     updateUrlForStore(gasId, { alias, autoOpen: autoOpenThisLookup });
+    if (!alias) {
+      resolveAliasForGasId(gasId).then((resolved) => {
+        if (resolved) updateUrlForStore(gasId, { alias: resolved, autoOpen: autoOpenThisLookup });
+      });
+    }
     setStatus("statusSuccess", "success");
     setMockNoticeVisible(false);
   } catch (err) {
@@ -1116,6 +1158,11 @@ async function handleLookup(event) {
       const gasIdFromMock = extractGasId(mock) || raw;
       const alias = resolveStoreAlias(mock);
       updateUrlForStore(gasIdFromMock, { alias, autoOpen: autoOpenThisLookup });
+      if (!alias) {
+        resolveAliasForGasId(gasIdFromMock).then((resolved) => {
+          if (resolved) updateUrlForStore(gasIdFromMock, { alias: resolved, autoOpen: autoOpenThisLookup });
+        });
+      }
       setStatus("statusSuccess", "success");
       setMockNoticeVisible(true);
     } else {
