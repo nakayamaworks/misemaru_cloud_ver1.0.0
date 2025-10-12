@@ -12,6 +12,12 @@
 
 const REGISTRY_BOOL_TRUE = new Set(["1", "true", "yes", "y", "ok", "verified", "公開", "有効", "enabled"]);
 
+const REGISTRY_CACHE_VERSION = 1;
+const REGISTRY_CACHE_EXPIRATION = 60 * 10; // 10 minutes
+const REGISTRY_CACHE_KEYS = {
+  ROWS: `registry_rows_v${REGISTRY_CACHE_VERSION}`,
+};
+
 const REGISTRY_SHEET_NAME_CANDIDATES = [
   "店舗レジストリ",
   "StoreRegistry",
@@ -53,15 +59,54 @@ function getRegistrySheet() {
 }
 
 function readRegistryRows() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = REGISTRY_CACHE_KEYS.ROWS;
+  if (cache) {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          Logger.log(`[REGISTRY] cache hit (${parsed.length} rows)`);
+          return parsed;
+        }
+      } catch (err) {
+        Logger.log("[REGISTRY] cache parse failed, regenerating");
+        cache.remove(cacheKey);
+      }
+      console.warn("[REGISTRY] cache parse failed, regenerating", err);
+    }
+  }
+
   const sheet = getRegistrySheet();
   const values = sheet.getDataRange().getValues();
   if (!values.length) return [];
   const headers = values[0].map((cell) => String(cell || "").trim());
   const colIndex = buildColIndex(headers, STORE_REGISTRY_COLS);
   const baseUrl = ScriptApp.getService().getUrl() || "";
-  return values.slice(1)
-    .map((row) => normalizeRegistryRow(row, colIndex, baseUrl))
-    .filter((row) => !!row);
+  const dataRows = values.slice(1);
+  const rows = dataRows.length
+    ? dataRows
+        .map((row) => normalizeRegistryRow(row, colIndex, baseUrl))
+        .filter((row) => !!row)
+    : [];
+  Logger.log(`[REGISTRY] cache miss, fetched ${rows.length} rows from sheet`);
+  if (cache) {
+    try {
+      const serialized = JSON.stringify(rows);
+      if (serialized.length < 90000) {
+        cache.put(cacheKey, serialized, REGISTRY_CACHE_EXPIRATION);
+        Logger.log("[REGISTRY] cache stored successfully");
+      } else {
+        Logger.log(`[REGISTRY] cache skipped (payload too large: ${serialized.length} bytes)`);
+        console.warn("[REGISTRY] cache skipped due to size", serialized.length);
+      }
+    } catch (err) {
+      Logger.log("[REGISTRY] cache write skipped due to serialization error");
+      console.warn("[REGISTRY] cache put failed", err);
+    }
+  }
+  return rows;
 }
 
 function pickCell(row, idx) {
@@ -182,4 +227,14 @@ function doPost() {
 
 function doOptions() {
   return makeResponse({ ok: true });
+}
+
+function clearRegistryCache() {
+  try {
+    CacheService.getScriptCache().remove(REGISTRY_CACHE_KEYS.ROWS);
+    Logger.log("[REGISTRY] cache cleared");
+  } catch (err) {
+    Logger.log("[REGISTRY] cache clear failed");
+    console.warn("[REGISTRY] cache clear failed", err);
+  }
 }

@@ -1602,10 +1602,6 @@ async function launchFriendlyId(friendlyId) {
   state.activeFriendlyId = trimmed;
   state.pendingFriendlyId = "";
   if (!alreadyActive) beginAutoOpen(trimmed);
-  if (!state.directoryStores.length && state.directoryLoading) {
-    state.pendingFriendlyId = trimmed;
-    return;
-  }
   try {
     const gasId = await resolveFriendlyId(trimmed);
     if (!gasId) {
