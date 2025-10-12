@@ -22,7 +22,12 @@ window.MISEMARU.DEFAULT_LANG = window.MISEMARU.DEFAULT_LANG || 'ja';
 window.MISEMARU.AVAILABLE_LANGS = window.MISEMARU.AVAILABLE_LANGS || ['ja','en','zh-CN','zh-TW'];
 
 // Registry API endpoint for store verification (set in management console)
-window.MISEMARU.REGISTRY_API = window.MISEMARU.REGISTRY_API || window.MISEMARU.GAS_BASE || "";
+window.MISEMARU.REGISTRY_MASTER_API = window.MISEMARU.REGISTRY_MASTER_API || "https://script.google.com/macros/s/AKfycbx4HEO39WxQbS4yonsycafUDq-hm9NpRzZveDZYJDMsNvJ8iKy0_VaQYKhtIIdImHv-/exec";
+if (window.MISEMARU.REGISTRY_MASTER_API) {
+  window.MISEMARU.REGISTRY_API = window.MISEMARU.REGISTRY_MASTER_API;
+} else {
+  window.MISEMARU.REGISTRY_API = window.MISEMARU.REGISTRY_API || window.MISEMARU.GAS_BASE || "";
+}
 
 // Optional mock registry entries for local development / demo
 window.MISEMARU.MOCK_REGISTRY = window.MISEMARU.MOCK_REGISTRY || [
