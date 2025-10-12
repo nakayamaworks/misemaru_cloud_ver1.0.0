@@ -1245,14 +1245,16 @@ function formatDirectoryStatus(store) {
 function sanitizeGasId(value) {
   const str = String(value || "").trim();
   if (!str) return "";
-  const match = str.match(/AK[A-Za-z0-9_-]{10,}/i);
-  if (match) return match[0];
+  const directMatch = str.match(/^(AK[A-Za-z0-9_-]{10,})$/i);
+  if (directMatch) return directMatch[1];
+  const urlMatch = str.match(/\/s\/(AK[A-Za-z0-9_-]{10,})/i);
+  if (urlMatch) return urlMatch[1];
   return str;
 }
 
 function looksLikeGasId(value) {
   const str = sanitizeGasId(value);
-  return /^AK/i.test(str) && str.length > 10;
+  return /^AK[A-Za-z0-9_-]{10,}$/i.test(str);
 }
 
 function extractGasId(raw) {
