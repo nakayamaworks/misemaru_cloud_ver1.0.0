@@ -932,13 +932,25 @@ function renderStore(store, options) {
   setMockNoticeVisible(state.usedMock);
 }
 
-async function lookupRegistry(gasId) {
+async function lookupRegistry(query) {
   if (!registryApi) {
     return { ok: false, error: "registry_missing" };
   }
+  let gasId = "";
+  let friendlyId = "";
+  if (typeof query === "string") {
+    gasId = query;
+  } else if (query && typeof query === "object") {
+    gasId = query.gasId || query.GasId || "";
+    friendlyId = query.friendlyId || query.id || query.ID || "";
+  }
+  if (!gasId && !friendlyId) {
+    return { ok: false, error: "missing_identifier" };
+  }
   const url = new URL(registryApi);
   url.searchParams.set("action", "lookup");
-  url.searchParams.set("gasId", gasId);
+  if (gasId) url.searchParams.set("gasId", gasId);
+  if (friendlyId) url.searchParams.set("id", friendlyId);
   const resp = await fetch(url.toString(), {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -1012,7 +1024,7 @@ async function resolveFriendlyId(friendlyId) {
 
   if (registryApi) {
     try {
-      const attempt = await lookupRegistry(trimmed);
+      const attempt = await lookupRegistry({ friendlyId: trimmed });
       if (attempt.ok && attempt.store) {
         const store = attempt.store;
         const gasId = extractGasId(store) || store.gasId || store.GAS_ID || "";
@@ -1080,7 +1092,7 @@ async function handleLookup(event) {
   state.usedMock = false;
   try {
     const gasId = raw;
-    let response = await lookupRegistry(gasId);
+    let response = await lookupRegistry({ gasId });
     if (!response.ok) {
       if (response.error === "registry_missing") {
         setStatus("registryMissingMessage", "warning");
