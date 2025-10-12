@@ -444,6 +444,23 @@ function jsonpRequest(urlInput, options) {
   });
 }
 
+async function fetchRegistryJson(url) {
+  const target = url instanceof URL ? new URL(url.toString()) : new URL(url);
+  try {
+    const resp = await fetch(target.toString(), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (resp.ok) {
+      return await resp.json();
+    }
+  } catch (err) {
+    /* fall back to JSONP */
+  }
+  return jsonpRequest(target);
+}
+
 function getParamCaseInsensitive(searchParams, name) {
   if (!searchParams || !name) return "";
   const target = String(name).toLowerCase();
@@ -1329,12 +1346,12 @@ async function fetchRegistryList() {
   const url = new URL(registryApi);
   url.searchParams.set("action", "list");
   try {
-    const data = await jsonpRequest(url);
+    const data = await fetchRegistryJson(url);
     const stores = data?.stores || data?.results || data?.list || [];
     const updatedAt = data?.updatedAt || data?.timestamp || data?.generatedAt || null;
     return { ok: true, stores, updatedAt };
   } catch (err) {
-    return { ok: false, error: "jsonp_error", detail: String(err || "") };
+    return { ok: false, error: "registry_fetch_failed", detail: String(err || "") };
   }
 }
 
