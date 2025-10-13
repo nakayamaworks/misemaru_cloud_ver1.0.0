@@ -111,22 +111,30 @@
     body.store-preloading-manual {
       background: #020617;
     }
+    body.store-preloading-manual::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(148, 163, 184, .12), transparent 55%), linear-gradient(120deg, rgba(15, 23, 42, .45), rgba(2, 6, 23, .65));
+      z-index: 1030;
+      pointer-events: none;
+    }
     body.store-preloading-manual main {
-      filter: blur(9px);
-      transform: scale(.992);
-      opacity: .55;
+      filter: blur(8px);
+      transform: scale(.995);
+      opacity: .78;
       transition: filter .25s ease, transform .25s ease, opacity .25s ease;
     }
     body.store-preloading-manual .store-app {
-      background: rgba(15, 23, 42, .32);
+      background: transparent;
     }
     body.store-preloading-manual .store-app-frame {
-      background: transparent;
-      backdrop-filter: blur(22px);
+      background: rgba(15, 23, 42, .04);
+      backdrop-filter: blur(20px);
     }
     body.store-preloading-manual .iframe-overlay {
-      background: rgba(15, 23, 42, .28);
-      backdrop-filter: blur(24px);
+      background: rgba(15, 23, 42, .18);
+      backdrop-filter: blur(26px);
     }
     body.store-preloading-manual .iframe-overlay .inner {
       color: #e2e8f0;
