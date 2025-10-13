@@ -82,7 +82,7 @@ const DICT = {
       storesLoading: "一覧を読み込んでいます…",
       storesError: "店舗リストの取得に失敗しました。時間を置いて再度お試しください。",
       storesCountryUnknown: "国指定なし",
-    }
+    },
   en: {
       languageStepTitle: "Choose your language",
       languageStepDescription: "Pick the language you'd like to use across the Misemaru Cloud portal.",
@@ -157,8 +157,8 @@ const DICT = {
       storesUpdatedAt: "Last update",
       storesLoading: "Loading directory…",
       storesError: "We could not load the directory. Please try again later.",
-      storesCountryUnknown: "Not specified",
-    }
+    storesCountryUnknown: "Not specified",
+  },
   "zh-CN": {
       languageStepTitle: "选择使用语言",
       languageStepDescription: "请选择在 Misemaru Cloud 门户中使用的语言。",
@@ -234,7 +234,7 @@ const DICT = {
       storesLoading: "正在载入门店列表…",
       storesError: "获取门店列表失败，请稍后再试。",
       storesCountryUnknown: "未指定",
-    }
+    },
   es: {
       languageStepTitle: "Elige tu idioma",
       languageStepDescription: "Selecciona el idioma que quieres usar en el portal de Misemaru Cloud.",
@@ -310,7 +310,7 @@ const DICT = {
       storesLoading: "Cargando directorio…",
       storesError: "No se pudo cargar la lista. Inténtalo de nuevo más tarde.",
       storesCountryUnknown: "No especificado",
-    }
+    },
   ko: {
       languageStepTitle: "사용할 언어를 선택하세요",
       languageStepDescription: "Misemaru Cloud 포털에서 사용할 언어를 선택합니다.",
@@ -386,7 +386,7 @@ const DICT = {
       storesLoading: "매장 목록을 불러오는 중…",
       storesError: "매장 목록을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",
       storesCountryUnknown: "국가 정보 없음",
-    }
+    },
 };
 
 const DEFAULT_PRELOADER_MESSAGE_KEY = "loadingStoreStage1";
