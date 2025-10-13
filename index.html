@@ -195,12 +195,14 @@
       opacity: .65;
     }
     .btn-outline-store,
-    .btn-outline-primary {
+    .btn-outline-primary,
+    .btn-primary {
       position: relative;
       overflow: hidden;
     }
     .btn-outline-store::after,
-    .btn-outline-primary::after {
+    .btn-outline-primary::after,
+    .btn-primary::after {
       content: "";
       position: absolute;
       inset: 0;
@@ -210,17 +212,21 @@
     .btn-outline-store::after {
       background: rgba(245, 158, 11, .08);
     }
-    .btn-outline-primary::after {
+    .btn-outline-primary::after,
+    .btn-primary::after {
       background: rgba(37, 99, 235, .08);
     }
     .btn-outline-store:hover::after,
     .btn-outline-store:focus::after,
     .btn-outline-primary:hover::after,
-    .btn-outline-primary:focus::after {
+    .btn-outline-primary:focus::after,
+    .btn-primary:hover::after,
+    .btn-primary:focus::after {
       opacity: 1;
     }
     .btn-outline-store,
-    .btn-outline-primary {
+    .btn-outline-primary,
+    .btn-primary {
       color: #fff;
       box-shadow: 0 16px 32px rgba(15, 23, 42, .18);
       transition: background .25s ease, color .25s ease, transform .2s ease, box-shadow .25s ease;
@@ -229,7 +235,8 @@
       border-color: #f59e0b;
       background: linear-gradient(135deg, #f59e0b, #d97706);
     }
-    .btn-outline-primary {
+    .btn-outline-primary,
+    .btn-primary {
       border-color: #2563eb;
       background: linear-gradient(135deg, #2563eb, #4338ca);
     }
@@ -238,7 +245,10 @@
     .btn-outline-store:active,
     .btn-outline-primary:hover,
     .btn-outline-primary:focus,
-    .btn-outline-primary:active {
+    .btn-outline-primary:active,
+    .btn-primary:hover,
+    .btn-primary:focus,
+    .btn-primary:active {
       color: #1f2937;
       background: #fff;
       transform: translateY(-1px);
@@ -247,7 +257,9 @@
     .btn-outline-store:disabled,
     .btn-outline-store.disabled,
     .btn-outline-primary:disabled,
-    .btn-outline-primary.disabled {
+    .btn-outline-primary.disabled,
+    .btn-primary:disabled,
+    .btn-primary.disabled {
       color: rgba(255, 255, 255, .78);
       border-color: rgba(148, 163, 184, .35);
       background: rgba(148, 163, 184, .42);
