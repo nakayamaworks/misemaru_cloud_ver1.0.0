@@ -113,19 +113,20 @@
     }
     body.store-preloading-manual main {
       filter: blur(9px);
-      transform: scale(.99);
-      transition: filter .25s ease, transform .25s ease;
+      transform: scale(.992);
+      opacity: .55;
+      transition: filter .25s ease, transform .25s ease, opacity .25s ease;
     }
     body.store-preloading-manual .store-app {
-      background: rgba(15, 23, 42, .6);
+      background: rgba(15, 23, 42, .32);
     }
     body.store-preloading-manual .store-app-frame {
-      background: rgba(2, 6, 23, .25);
-      backdrop-filter: blur(14px);
+      background: transparent;
+      backdrop-filter: blur(22px);
     }
     body.store-preloading-manual .iframe-overlay {
-      background: rgba(15, 23, 42, .45);
-      backdrop-filter: blur(18px);
+      background: rgba(15, 23, 42, .28);
+      backdrop-filter: blur(24px);
     }
     body.store-preloading-manual .iframe-overlay .inner {
       color: #e2e8f0;
