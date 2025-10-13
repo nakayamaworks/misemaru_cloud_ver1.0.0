@@ -49,7 +49,9 @@ const DICT = {
     gasIdRequired: "店舗の WebアプリURL を入力してください。",
     statusSuccess: "認証済み店舗が見つかりました。下の操作から続きを行ってください。",
     verifiedOnLabel: "最終認証日",
-    loadingStoreMessage: "店舗情報を取得しています…",
+    loadingStoreStage1: "店舗情報確認中…",
+    loadingStoreStage2: "店舗表示準備中…",
+    loadingStoreMessage: "店舗情報確認中…",
     createPageTitle: "店舗開設ガイド",
     createPageLead: "みせまるクラウドに店舗を登録するための準備〜公開手順をまとめました。",
     createSectionBasicsTitle: "準備：基本設定",
@@ -123,7 +125,9 @@ const DICT = {
     gasIdRequired: "Please enter the store Web App URL.",
     statusSuccess: "Verified store found. Opening options below.",
     verifiedOnLabel: "Verified on",
-    loadingStoreMessage: "Fetching store experience…",
+    loadingStoreStage1: "Confirming store details…",
+    loadingStoreStage2: "Preparing store view…",
+    loadingStoreMessage: "Confirming store details…",
     createPageTitle: "Store Onboarding Guide",
     createPageLead: "Follow this checklist to prepare, deploy, and verify your Misemaru Cloud store.",
     createSectionBasicsTitle: "Preparation: essentials",
@@ -197,7 +201,9 @@ const DICT = {
     gasIdRequired: "请输入门店的 Web 应用 URL。",
     statusSuccess: "已找到认证门店。请使用下方选项继续。",
     verifiedOnLabel: "认证日期",
-    loadingStoreMessage: "正在获取门店页面…",
+    loadingStoreStage1: "正在确认门店信息…",
+    loadingStoreStage2: "正在准备门店页面…",
+    loadingStoreMessage: "正在确认门店信息…",
     createPageTitle: "门店上线指南",
     createPageLead: "按照下面的步骤准备、部署并完成 Misemaru Cloud 门店的认证。",
     createSectionBasicsTitle: "准备：基础信息",
@@ -271,7 +277,9 @@ const DICT = {
     gasIdRequired: "Introduce la URL de la aplicación web de la tienda.",
     statusSuccess: "Tienda verificada encontrada. Usa las opciones siguientes para continuar.",
     verifiedOnLabel: "Verificada el",
-    loadingStoreMessage: "Cargando la experiencia de la tienda…",
+    loadingStoreStage1: "Confirmando la información de la tienda…",
+    loadingStoreStage2: "Preparando la vista de la tienda…",
+    loadingStoreMessage: "Confirmando la información de la tienda…",
     createPageTitle: "Guía de incorporación de tiendas",
     createPageLead: "Sigue estos pasos para preparar, desplegar y verificar tu tienda Misemaru Cloud.",
     createSectionBasicsTitle: "Preparación: elementos clave",
@@ -345,7 +353,9 @@ const DICT = {
     gasIdRequired: "매장의 Web 앱 URL을 입력하세요.",
     statusSuccess: "인증된 매장을 찾았습니다. 아래 옵션으로 계속 진행하세요.",
     verifiedOnLabel: "인증 날짜",
-    loadingStoreMessage: "매장 페이지를 불러오는 중…",
+    loadingStoreStage1: "매장 정보를 확인하는 중…",
+    loadingStoreStage2: "매장 화면을 준비하는 중…",
+    loadingStoreMessage: "매장 정보를 확인하는 중…",
     createPageTitle: "매장 개설 가이드",
     createPageLead: "다음 체크리스트를 따라 Misemaru Cloud 매장을 준비, 배포, 인증하세요.",
     createSectionBasicsTitle: "준비: 기본 항목",
@@ -379,6 +389,8 @@ const DICT = {
   },
 };
 
+const DEFAULT_PRELOADER_MESSAGE_KEY = "loadingStoreStage1";
+
 const LS_KEY = "misemaru_lang";
 const LANG_PARAM = "lang";
 const GAS_PARAM = "gasId";
@@ -388,6 +400,7 @@ const state = {
   store: null,
   statusKey: null,
   statusTone: "info",
+  preloaderMessageKey: DEFAULT_PRELOADER_MESSAGE_KEY,
   usedMock: false,
   autoOpenTargetId: "",
   autoOpenActive: false,
@@ -607,6 +620,7 @@ function applyTranslations(lang) {
     if (!key) return;
     el.setAttribute("placeholder", t(key, lang));
   });
+  refreshGlobalPreloaderMessage();
   updateDocumentTitle(lang);
   if (state.statusKey) {
     setStatus(state.statusKey, state.statusTone, { reapply: true });
@@ -686,9 +700,21 @@ function setLoading(isLoading) {
   if (input) input.disabled = !!isLoading;
 }
 
+function updateGlobalPreloaderMessage(key) {
+  const normalized = (typeof key === "string" && key) ? key : DEFAULT_PRELOADER_MESSAGE_KEY;
+  state.preloaderMessageKey = normalized;
+  const el = document.querySelector('[data-role="preloader-message"]');
+  if (el) el.textContent = t(normalized);
+}
+
+function refreshGlobalPreloaderMessage() {
+  updateGlobalPreloaderMessage(state.preloaderMessageKey);
+}
+
 function showGlobalPreloader() {
   const overlay = document.getElementById("globalPreloader");
   if (!overlay) return;
+  updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   overlay.classList.add("active");
   overlay.setAttribute("aria-busy", "true");
 }
@@ -714,6 +740,7 @@ function cancelAutoOpen() {
     state.autoOpenActive = false;
     hideGlobalPreloader();
   }
+  updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
 }
 
 function getStoreIframeElements() {
@@ -978,6 +1005,7 @@ function renderStore(store, options) {
 
   const shouldAutoOpen = Boolean(opts.autoOpen) && Boolean(embedUrl);
   if (shouldAutoOpen) {
+    updateGlobalPreloaderMessage("loadingStoreStage2");
     openStoreInline();
   } else {
     resetStoreIframe();

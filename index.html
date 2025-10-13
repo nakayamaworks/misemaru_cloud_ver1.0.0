@@ -179,8 +179,8 @@
       display: none;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, rgba(15, 23, 42, .92), rgba(2, 6, 23, .98));
-      backdrop-filter: blur(4px);
+      background: radial-gradient(circle at center, #0f172a, #020617);
+      background-color: #020617;
       z-index: 2000;
       color: #f8fafc;
       text-align: center;
@@ -334,7 +334,7 @@
   <div id="globalPreloader" class="global-preloader" aria-live="assertive" aria-busy="false">
     <div class="inner">
       <div class="spinner-border text-light" role="status" aria-hidden="true"></div>
-      <p data-i18n="loadingStoreMessage">店舗情報を取得しています…</p>
+      <p data-role="preloader-message" data-i18n="loadingStoreStage1">店舗情報確認中…</p>
     </div>
   </div>
 
