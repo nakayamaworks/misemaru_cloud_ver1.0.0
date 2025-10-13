@@ -117,6 +117,16 @@
       opacity: .75;
       transition: filter .25s ease, transform .25s ease, opacity .25s ease;
     }
+    .store-app {
+      transition: opacity .25s ease;
+    }
+    .store-app.preloading-inline {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .store-app.preloading-inline iframe {
+      pointer-events: none;
+    }
     .store-app-frame {
       position: relative;
       flex: 1;
@@ -127,6 +137,7 @@
       height: 100%;
       border: 0;
       background: #fff;
+      pointer-events: auto;
     }
     .inline-preloader {
       position: fixed;

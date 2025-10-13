@@ -824,6 +824,7 @@ function resetStoreIframe() {
   if (wrap) {
     wrap.classList.remove("active");
     wrap.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("preloading-inline");
   }
   updateInlinePreloaderMessage(DEFAULT_INLINE_PRELOADER_MESSAGE_KEY);
   hideInlinePreloader();
@@ -850,12 +851,14 @@ function loadStoreIframe(url) {
     hideInlinePreloader();
     setStoreOverlayMode("auto");
     wrap.classList.add("active");
+    wrap.classList.remove("preloading-inline");
     wrap.setAttribute("aria-hidden", "false");
     updateGlobalPreloaderMessage("loadingStoreStage2");
   } else {
     setStoreOverlayMode(null);
-    wrap.classList.remove("active");
-    wrap.setAttribute("aria-hidden", "true");
+    wrap.classList.add("active");
+    wrap.classList.add("preloading-inline");
+    wrap.setAttribute("aria-hidden", "false");
     showInlinePreloader("loadingStoreStage2");
   }
 
@@ -863,6 +866,7 @@ function loadStoreIframe(url) {
     if (!isAutoOpen) {
       hideInlinePreloader();
       wrap.classList.add("active");
+      wrap.classList.remove("preloading-inline");
       wrap.setAttribute("aria-hidden", "false");
       if (document.body) document.body.classList.add("store-view");
     }
@@ -878,6 +882,7 @@ function loadStoreIframe(url) {
   function handleError() {
     cleanup();
     if (!isAutoOpen) hideInlinePreloader();
+    wrap.classList.remove("preloading-inline");
     resetStoreIframe();
     setStatus("errorMessage", "error");
     cancelAutoOpen();
@@ -890,6 +895,7 @@ function loadStoreIframe(url) {
       if (document.body) document.body.classList.add("store-view");
     } else {
       hideInlinePreloader();
+      wrap.classList.remove("preloading-inline");
       wrap.classList.add("active");
       wrap.setAttribute("aria-hidden", "false");
       if (document.body) document.body.classList.add("store-view");
