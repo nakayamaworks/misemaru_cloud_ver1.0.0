@@ -109,7 +109,10 @@
       display: none;
     }
     body.store-preloading-manual {
-      background: #020617;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: background 0.3s ease;
     }
     body.store-preloading-manual::before {
       content: "";
