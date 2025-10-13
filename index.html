@@ -108,6 +108,38 @@
     body.store-view main {
       display: none;
     }
+    body.store-preloading-manual {
+      background: #020617;
+    }
+    body.store-preloading-manual main {
+      filter: blur(9px);
+      transform: scale(.99);
+      transition: filter .25s ease, transform .25s ease;
+    }
+    body.store-preloading-manual .store-app {
+      background: rgba(15, 23, 42, .6);
+    }
+    body.store-preloading-manual .store-app-frame {
+      background: rgba(2, 6, 23, .25);
+      backdrop-filter: blur(14px);
+    }
+    body.store-preloading-manual .iframe-overlay {
+      background: rgba(15, 23, 42, .45);
+      backdrop-filter: blur(18px);
+    }
+    body.store-preloading-manual .iframe-overlay .inner {
+      color: #e2e8f0;
+    }
+    body.store-preloading-auto .store-app,
+    body.store-view .store-app {
+      background: #020617;
+    }
+    body.store-preloading-auto .iframe-overlay {
+      background: rgba(15, 23, 42, .95);
+    }
+    body.store-view .iframe-overlay {
+      background: rgba(15, 23, 42, .86);
+    }
     .store-app-frame {
       position: relative;
       flex: 1;
@@ -193,9 +225,8 @@
       display: none;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, rgba(15, 23, 42, .92), rgba(2, 6, 23, .97));
-      background-color: rgba(2, 6, 23, .95);
-      backdrop-filter: blur(14px);
+      background: radial-gradient(circle at center, #0f172a, #020617);
+      background-color: #020617;
       z-index: 2000;
       color: #f8fafc;
       text-align: center;

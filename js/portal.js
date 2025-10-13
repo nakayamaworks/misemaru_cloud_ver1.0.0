@@ -745,6 +745,18 @@ function refreshIframePreloaderMessage() {
   updateIframePreloaderMessage(state.iframePreloaderMessageKey);
 }
 
+function setStoreOverlayMode(mode) {
+  if (typeof document === "undefined" || !document.body) return;
+  const classAuto = "store-preloading-auto";
+  const classManual = "store-preloading-manual";
+  document.body.classList.remove(classAuto, classManual);
+  if (mode === "auto") {
+    document.body.classList.add(classAuto);
+  } else if (mode === "manual") {
+    document.body.classList.add(classManual);
+  }
+}
+
 function showGlobalPreloader() {
   const overlay = document.getElementById("globalPreloader");
   if (!overlay) return;
@@ -776,6 +788,7 @@ function cancelAutoOpen() {
   }
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   updateIframePreloaderMessage(DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY);
+  setStoreOverlayMode(null);
 }
 
 function getStoreIframeElements() {
@@ -800,6 +813,7 @@ function resetStoreIframe() {
   if (overlay) overlay.classList.remove("show");
   updateIframePreloaderMessage(DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY);
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
+  setStoreOverlayMode(null);
   document.body.classList.remove("store-view");
 }
 
@@ -811,15 +825,20 @@ function loadStoreIframe(url) {
     resetStoreIframe();
     return;
   }
+  if (typeof document !== "undefined" && document.body) {
+    document.body.classList.remove("store-view");
+  }
+  const isAutoOpen = !!state.autoOpenActive;
+  setStoreOverlayMode(isAutoOpen ? "auto" : "manual");
   wrap.classList.add("active");
   wrap.setAttribute("aria-hidden", "false");
-  document.body.classList.add("store-view");
   updateIframePreloaderMessage("loadingStoreStage2");
   updateGlobalPreloaderMessage("loadingStoreStage2");
   if (overlay) overlay.classList.add("show");
   const current = iframe.getAttribute("src") || "";
   if (current === url) {
     if (overlay) overlay.classList.remove("show");
+    setStoreOverlayMode(null);
     return;
   }
   function handleError() {
@@ -834,6 +853,8 @@ function loadStoreIframe(url) {
     if (overlay) overlay.classList.remove("show");
     iframe.removeEventListener("load", handleLoad);
     iframe.removeEventListener("error", handleError);
+    setStoreOverlayMode(null);
+    document.body.classList.add("store-view");
     cancelAutoOpen();
   }
   iframe.addEventListener("load", handleLoad);
