@@ -390,7 +390,7 @@ const DICT = {
 };
 
 const DEFAULT_PRELOADER_MESSAGE_KEY = "loadingStoreStage1";
-const DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY = "loadingStoreStage2";
+const DEFAULT_INLINE_PRELOADER_MESSAGE_KEY = "loadingStoreStage2";
 
 const LS_KEY = "misemaru_lang";
 const LANG_PARAM = "lang";
@@ -402,7 +402,7 @@ const state = {
   statusKey: null,
   statusTone: "info",
   preloaderMessageKey: DEFAULT_PRELOADER_MESSAGE_KEY,
-  iframePreloaderMessageKey: DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY,
+  inlinePreloaderMessageKey: DEFAULT_INLINE_PRELOADER_MESSAGE_KEY,
   usedMock: false,
   autoOpenTargetId: "",
   autoOpenActive: false,
@@ -623,7 +623,7 @@ function applyTranslations(lang) {
     el.setAttribute("placeholder", t(key, lang));
   });
   refreshGlobalPreloaderMessage();
-  refreshIframePreloaderMessage();
+  refreshInlinePreloaderMessage();
   updateDocumentTitle(lang);
   if (state.statusKey) {
     setStatus(state.statusKey, state.statusTone, { reapply: true });
@@ -724,14 +724,14 @@ function refreshGlobalPreloaderMessage() {
   updateGlobalPreloaderMessage(state.preloaderMessageKey);
 }
 
-function updateIframePreloaderMessage(key) {
+function updateInlinePreloaderMessage(key) {
   const normalized = (() => {
-    if (typeof key !== "string") return DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY;
+    if (typeof key !== "string") return DEFAULT_INLINE_PRELOADER_MESSAGE_KEY;
     const trimmed = key.trim();
-    return trimmed ? trimmed : DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY;
+    return trimmed ? trimmed : DEFAULT_INLINE_PRELOADER_MESSAGE_KEY;
   })();
-  state.iframePreloaderMessageKey = normalized;
-  const el = document.querySelector('[data-role="iframe-preloader-message"]');
+  state.inlinePreloaderMessageKey = normalized;
+  const el = document.querySelector('[data-role="inline-preloader-message"]');
   if (!el) return;
   let message = t(normalized);
   if (message === normalized && normalized !== "loadingStoreMessage") {
@@ -741,19 +741,34 @@ function updateIframePreloaderMessage(key) {
   if (el.dataset) el.dataset.i18n = normalized;
 }
 
-function refreshIframePreloaderMessage() {
-  updateIframePreloaderMessage(state.iframePreloaderMessageKey);
+function refreshInlinePreloaderMessage() {
+  updateInlinePreloaderMessage(state.inlinePreloaderMessageKey);
+}
+
+function showInlinePreloader(messageKey) {
+  updateInlinePreloaderMessage(messageKey || DEFAULT_INLINE_PRELOADER_MESSAGE_KEY);
+  const el = document.getElementById("inlinePreloader");
+  if (!el) return;
+  el.classList.add("active");
+  el.setAttribute("aria-busy", "true");
+  if (document.body) document.body.classList.add("store-preloading-manual");
+}
+
+function hideInlinePreloader() {
+  const el = document.getElementById("inlinePreloader");
+  if (el) {
+    el.classList.remove("active");
+    el.setAttribute("aria-busy", "false");
+  }
+  if (document.body) document.body.classList.remove("store-preloading-manual");
 }
 
 function setStoreOverlayMode(mode) {
   if (typeof document === "undefined" || !document.body) return;
   const classAuto = "store-preloading-auto";
-  const classManual = "store-preloading-manual";
-  document.body.classList.remove(classAuto, classManual);
+  document.body.classList.remove(classAuto);
   if (mode === "auto") {
     document.body.classList.add(classAuto);
-  } else if (mode === "manual") {
-    document.body.classList.add(classManual);
   }
 }
 
@@ -787,7 +802,8 @@ function cancelAutoOpen() {
     hideGlobalPreloader();
   }
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
-  updateIframePreloaderMessage(DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY);
+  updateInlinePreloaderMessage(DEFAULT_INLINE_PRELOADER_MESSAGE_KEY);
+  hideInlinePreloader();
   setStoreOverlayMode(null);
 }
 
@@ -795,13 +811,12 @@ function getStoreIframeElements() {
   // 埋め込み iframe とその付随要素をまとめて取得する
   const wrap = document.getElementById("storeApp");
   const iframe = document.getElementById("storeIframe");
-  const overlay = document.getElementById("storeIframeOverlay");
-  return { wrap, iframe, overlay };
+  return { wrap, iframe };
 }
 
 function resetStoreIframe() {
   // 埋め込み状態を初期化し、フルスクリーン表示を閉じる
-  const { wrap, iframe, overlay } = getStoreIframeElements();
+  const { wrap, iframe } = getStoreIframeElements();
   if (iframe) {
     iframe.removeAttribute("src");
     iframe.dataset.src = "";
@@ -810,8 +825,8 @@ function resetStoreIframe() {
     wrap.classList.remove("active");
     wrap.setAttribute("aria-hidden", "true");
   }
-  if (overlay) overlay.classList.remove("show");
-  updateIframePreloaderMessage(DEFAULT_IFRAME_PRELOADER_MESSAGE_KEY);
+  updateInlinePreloaderMessage(DEFAULT_INLINE_PRELOADER_MESSAGE_KEY);
+  hideInlinePreloader();
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   setStoreOverlayMode(null);
   document.body.classList.remove("store-view");
@@ -819,44 +834,69 @@ function resetStoreIframe() {
 
 function loadStoreIframe(url) {
   // GAS 側のページを iframe に読み込み、ロード中はオーバーレイを表示する
-  const { wrap, iframe, overlay } = getStoreIframeElements();
+  const { wrap, iframe } = getStoreIframeElements();
   if (!iframe || !wrap) return;
   if (!url) {
     resetStoreIframe();
     return;
   }
-  if (typeof document !== "undefined" && document.body) {
-    document.body.classList.remove("store-view");
-  }
+
   const isAutoOpen = !!state.autoOpenActive;
-  setStoreOverlayMode(isAutoOpen ? "auto" : "manual");
-  wrap.classList.add("active");
-  wrap.setAttribute("aria-hidden", "false");
-  updateIframePreloaderMessage("loadingStoreStage2");
-  updateGlobalPreloaderMessage("loadingStoreStage2");
-  if (overlay) overlay.classList.add("show");
   const current = iframe.getAttribute("src") || "";
+
+  if (document.body) document.body.classList.remove("store-view");
+
+  if (isAutoOpen) {
+    hideInlinePreloader();
+    setStoreOverlayMode("auto");
+    wrap.classList.add("active");
+    wrap.setAttribute("aria-hidden", "false");
+    updateGlobalPreloaderMessage("loadingStoreStage2");
+  } else {
+    setStoreOverlayMode(null);
+    wrap.classList.remove("active");
+    wrap.setAttribute("aria-hidden", "true");
+    showInlinePreloader("loadingStoreStage2");
+  }
+
   if (current === url) {
-    if (overlay) overlay.classList.remove("show");
+    if (!isAutoOpen) {
+      hideInlinePreloader();
+      wrap.classList.add("active");
+      wrap.setAttribute("aria-hidden", "false");
+      if (document.body) document.body.classList.add("store-view");
+    }
     setStoreOverlayMode(null);
     return;
   }
-  function handleError() {
-    if (overlay) overlay.classList.remove("show");
-    iframe.removeEventListener("error", handleError);
+
+  const cleanup = () => {
     iframe.removeEventListener("load", handleLoad);
+    iframe.removeEventListener("error", handleError);
+  };
+
+  function handleError() {
+    cleanup();
+    if (!isAutoOpen) hideInlinePreloader();
     resetStoreIframe();
     setStatus("errorMessage", "error");
     cancelAutoOpen();
   }
+
   function handleLoad() {
-    if (overlay) overlay.classList.remove("show");
-    iframe.removeEventListener("load", handleLoad);
-    iframe.removeEventListener("error", handleError);
-    setStoreOverlayMode(null);
-    document.body.classList.add("store-view");
+    cleanup();
+    if (isAutoOpen) {
+      setStoreOverlayMode(null);
+      if (document.body) document.body.classList.add("store-view");
+    } else {
+      hideInlinePreloader();
+      wrap.classList.add("active");
+      wrap.setAttribute("aria-hidden", "false");
+      if (document.body) document.body.classList.add("store-view");
+    }
     cancelAutoOpen();
   }
+
   iframe.addEventListener("load", handleLoad);
   iframe.addEventListener("error", handleError, { once: true });
   iframe.dataset.src = url;

@@ -109,48 +109,13 @@
       display: none;
     }
     body.store-preloading-manual {
-      background: rgba(15, 23, 42, 0.5) !important;
-      backdrop-filter: blur(12px) !important;
-      -webkit-backdrop-filter: blur(12px);
-      transition: background 0.3s ease;
-    }
-    body.store-preloading-manual::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at 20% 20%, rgba(148, 163, 184, .12), transparent 55%), linear-gradient(120deg, rgba(15, 23, 42, .45), rgba(2, 6, 23, .65));
-      z-index: 1030;
-      pointer-events: none;
+      background: #020617;
     }
     body.store-preloading-manual main {
       filter: blur(8px);
       transform: scale(.995);
-      opacity: .78;
+      opacity: .75;
       transition: filter .25s ease, transform .25s ease, opacity .25s ease;
-    }
-    body.store-preloading-manual .store-app {
-      background: transparent;
-    }
-    body.store-preloading-manual .store-app-frame {
-      background: rgba(15, 23, 42, .04);
-      backdrop-filter: blur(20px);
-    }
-    body.store-preloading-manual .iframe-overlay {
-      background: rgba(15, 23, 42, .18);
-      backdrop-filter: blur(26px);
-    }
-    body.store-preloading-manual .iframe-overlay .inner {
-      color: #e2e8f0;
-    }
-    body.store-preloading-auto .store-app,
-    body.store-view .store-app {
-      background: #020617;
-    }
-    body.store-preloading-auto .iframe-overlay {
-      background: rgba(15, 23, 42, .95);
-    }
-    body.store-view .iframe-overlay {
-      background: rgba(15, 23, 42, .86);
     }
     .store-app-frame {
       position: relative;
@@ -163,36 +128,31 @@
       border: 0;
       background: #fff;
     }
-    .iframe-overlay {
-      position: absolute;
+    .inline-preloader {
+      position: fixed;
       inset: 0;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
-      background: rgba(15, 23, 42, .82);
-      backdrop-filter: blur(8px);
-      transition: opacity .22s ease, visibility .22s ease;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      z-index: 2;
-    }
-    .iframe-overlay.show {
-      opacity: 1;
-      visibility: visible;
+      background: rgba(2, 6, 23, .2);
+      backdrop-filter: blur(10px);
+      z-index: 1500;
+      color: #f8fafc;
+      text-align: center;
       pointer-events: auto;
     }
-    .iframe-overlay .inner {
+    .inline-preloader.active {
+      display: flex;
+    }
+    .inline-preloader .inner {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 1rem;
-      color: #f8fafc;
-      text-align: center;
     }
-    .iframe-overlay .inner p {
+    .inline-preloader .inner p {
       margin: 0;
-      font-size: 1rem;
+      font-size: 1.05rem;
       letter-spacing: .03em;
     }
     .callout-card {
@@ -398,15 +358,15 @@
 
   <div id="storeApp" class="store-app" aria-hidden="true">
     <div class="store-app-frame">
-      <div id="storeIframeOverlay" class="iframe-overlay">
-        <div class="inner">
-          <div class="spinner-border text-light" role="status" aria-hidden="true"></div>
-          <p data-role="iframe-preloader-message" data-i18n="loadingStoreStage2">店舗表示準備中…</p>
-        </div>
-        <span class="visually-hidden">Loading...</span>
-      </div>
       <iframe id="storeIframe" title="Misemaru Store" loading="lazy"
         allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+    </div>
+  </div>
+
+  <div id="inlinePreloader" class="inline-preloader" aria-live="assertive" aria-busy="false">
+    <div class="inner">
+      <div class="spinner-border text-light" role="status" aria-hidden="true"></div>
+      <p data-role="inline-preloader-message" data-i18n="loadingStoreStage2">店舗表示準備中…</p>
     </div>
   </div>
 
