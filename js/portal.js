@@ -403,6 +403,7 @@ const state = {
   statusTone: "info",
   preloaderMessageKey: DEFAULT_PRELOADER_MESSAGE_KEY,
   inlinePreloaderMessageKey: DEFAULT_INLINE_PRELOADER_MESSAGE_KEY,
+  inlinePreloaderTimer: null,
   usedMock: false,
   autoOpenTargetId: "",
   autoOpenActive: false,
@@ -763,6 +764,24 @@ function hideInlinePreloader() {
   if (document.body) document.body.classList.remove("store-preloading-manual");
 }
 
+function scheduleInlinePreloaderFallback(callback) {
+  if (state.inlinePreloaderTimer) {
+    clearTimeout(state.inlinePreloaderTimer);
+    state.inlinePreloaderTimer = null;
+  }
+  state.inlinePreloaderTimer = setTimeout(() => {
+    state.inlinePreloaderTimer = null;
+    callback();
+  }, 8000);
+}
+
+function clearInlinePreloaderFallback() {
+  if (state.inlinePreloaderTimer) {
+    clearTimeout(state.inlinePreloaderTimer);
+    state.inlinePreloaderTimer = null;
+  }
+}
+
 function setStoreOverlayMode(mode) {
   if (typeof document === "undefined" || !document.body) return;
   const classAuto = "store-preloading-auto";
@@ -804,6 +823,7 @@ function cancelAutoOpen() {
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   updateInlinePreloaderMessage(DEFAULT_INLINE_PRELOADER_MESSAGE_KEY);
   hideInlinePreloader();
+  clearInlinePreloaderFallback();
   setStoreOverlayMode(null);
 }
 
@@ -828,6 +848,7 @@ function resetStoreIframe() {
   }
   updateInlinePreloaderMessage(DEFAULT_INLINE_PRELOADER_MESSAGE_KEY);
   hideInlinePreloader();
+  clearInlinePreloaderFallback();
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   setStoreOverlayMode(null);
   document.body.classList.remove("store-view");
@@ -860,10 +881,18 @@ function loadStoreIframe(url) {
     wrap.classList.add("preloading-inline");
     wrap.setAttribute("aria-hidden", "false");
     showInlinePreloader("loadingStoreStage2");
+    scheduleInlinePreloaderFallback(() => {
+      wrap.classList.remove("preloading-inline");
+      hideInlinePreloader();
+      wrap.classList.add("active");
+      wrap.setAttribute("aria-hidden", "false");
+      if (document.body) document.body.classList.add("store-view");
+    });
   }
 
   if (current === url) {
     if (!isAutoOpen) {
+      clearInlinePreloaderFallback();
       hideInlinePreloader();
       wrap.classList.add("active");
       wrap.classList.remove("preloading-inline");
@@ -881,6 +910,7 @@ function loadStoreIframe(url) {
 
   function handleError() {
     cleanup();
+    clearInlinePreloaderFallback();
     if (!isAutoOpen) hideInlinePreloader();
     wrap.classList.remove("preloading-inline");
     resetStoreIframe();
@@ -890,6 +920,7 @@ function loadStoreIframe(url) {
 
   function handleLoad() {
     cleanup();
+    clearInlinePreloaderFallback();
     if (isAutoOpen) {
       setStoreOverlayMode(null);
       if (document.body) document.body.classList.add("store-view");
