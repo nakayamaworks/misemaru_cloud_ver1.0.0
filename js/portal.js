@@ -787,6 +787,7 @@ function loadStoreIframe(url) {
   wrap.classList.add("active");
   wrap.setAttribute("aria-hidden", "false");
   document.body.classList.add("store-view");
+  updateGlobalPreloaderMessage("loadingStoreStage2");
   if (overlay) overlay.classList.add("show");
   const current = iframe.getAttribute("src") || "";
   if (current === url) {
