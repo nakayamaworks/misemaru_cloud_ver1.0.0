@@ -701,10 +701,20 @@ function setLoading(isLoading) {
 }
 
 function updateGlobalPreloaderMessage(key) {
-  const normalized = (typeof key === "string" && key) ? key : DEFAULT_PRELOADER_MESSAGE_KEY;
+  const normalized = (() => {
+    if (typeof key !== "string") return DEFAULT_PRELOADER_MESSAGE_KEY;
+    const trimmed = key.trim();
+    return trimmed ? trimmed : DEFAULT_PRELOADER_MESSAGE_KEY;
+  })();
   state.preloaderMessageKey = normalized;
   const el = document.querySelector('[data-role="preloader-message"]');
-  if (el) el.textContent = t(normalized);
+  if (!el) return;
+  let message = t(normalized);
+  if (message === normalized && normalized !== "loadingStoreMessage") {
+    message = t("loadingStoreMessage");
+  }
+  el.textContent = message;
+  if (el.dataset) el.dataset.i18n = normalized;
 }
 
 function refreshGlobalPreloaderMessage() {
