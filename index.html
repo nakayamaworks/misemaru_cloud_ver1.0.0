@@ -126,6 +126,7 @@
       align-items: center;
       justify-content: center;
       background: rgba(15, 23, 42, .82);
+      backdrop-filter: blur(8px);
       transition: opacity .22s ease, visibility .22s ease;
       opacity: 0;
       visibility: hidden;
@@ -136,6 +137,19 @@
       opacity: 1;
       visibility: visible;
       pointer-events: auto;
+    }
+    .iframe-overlay .inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      color: #f8fafc;
+      text-align: center;
+    }
+    .iframe-overlay .inner p {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: .03em;
     }
     .callout-card {
       border-radius: 18px;
@@ -179,8 +193,9 @@
       display: none;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, #0f172a, #020617);
-      background-color: #020617;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, .92), rgba(2, 6, 23, .97));
+      background-color: rgba(2, 6, 23, .95);
+      backdrop-filter: blur(14px);
       z-index: 2000;
       color: #f8fafc;
       text-align: center;
@@ -341,7 +356,10 @@
   <div id="storeApp" class="store-app" aria-hidden="true">
     <div class="store-app-frame">
       <div id="storeIframeOverlay" class="iframe-overlay">
-        <div class="spinner-border text-light" role="status" aria-hidden="true"></div>
+        <div class="inner">
+          <div class="spinner-border text-light" role="status" aria-hidden="true"></div>
+          <p data-role="iframe-preloader-message" data-i18n="loadingStoreStage2">店舗表示準備中…</p>
+        </div>
         <span class="visually-hidden">Loading...</span>
       </div>
       <iframe id="storeIframe" title="Misemaru Store" loading="lazy"
