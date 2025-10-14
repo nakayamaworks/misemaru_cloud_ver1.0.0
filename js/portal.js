@@ -424,6 +424,207 @@ const state = {
   pendingPageParams: {},
 };
 
+const SIGNIN_BUTTON_PAGES = new Set(["31_index"]);
+
+const signinState = {
+  layer: null,
+  button: null,
+  clientId: (window.MISEMARU && window.MISEMARU.GSI_CLIENT_ID) || "",
+  initialized: false,
+  buttonRendered: false,
+  visible: false,
+  signedIn: false,
+  lastCredential: "",
+  googleReady: false,
+  pendingCredential: false,
+};
+
+function getSigninElements() {
+  if (!signinState.layer) {
+    signinState.layer = document.getElementById("google-signin-layer");
+  }
+  if (!signinState.button) {
+    signinState.button = document.getElementById("google-signin-button");
+  }
+  return { layer: signinState.layer, button: signinState.button };
+}
+
+function whenGoogleReady(cb) {
+  if (signinState.googleReady && window.google?.accounts?.id) {
+    try { cb(); } catch (err) { console.warn("[portal:gsi] callback error", err); }
+    return;
+  }
+  if (window.google?.accounts?.id) {
+    signinState.googleReady = true;
+    try { cb(); } catch (err) { console.warn("[portal:gsi] callback error", err); }
+    return;
+  }
+  let waited = 0;
+  const step = 100;
+  const limit = 5000;
+  const timer = setInterval(() => {
+    waited += step;
+    if (window.google?.accounts?.id) {
+      clearInterval(timer);
+      signinState.googleReady = true;
+      try { cb(); } catch (err) { console.warn("[portal:gsi] callback error", err); }
+      return;
+    }
+    if (waited >= limit) {
+      clearInterval(timer);
+      console.warn("[portal:gsi] google.accounts.id not available (timeout)");
+    }
+  }, step);
+}
+
+function hideSigninLayer() {
+  const { layer } = getSigninElements();
+  if (!layer) return;
+  if (signinState.visible) {
+    layer.style.display = "none";
+    signinState.visible = false;
+  }
+}
+
+function renderSigninButton() {
+  const { layer, button } = getSigninElements();
+  if (!layer || !button) return;
+  if (!signinState.clientId) {
+    hideSigninLayer();
+    console.warn("[portal:gsi] client_id missing; cannot render button");
+    return;
+  }
+
+  whenGoogleReady(() => {
+    try {
+      if (!signinState.initialized) {
+        if (!google?.accounts?.id) {
+          console.warn("[portal:gsi] google.accounts.id unavailable during init");
+          return;
+        }
+        google.accounts.id.initialize({
+          client_id: signinState.clientId,
+          callback: handleGsiCredential,
+          ux_mode: "popup",
+        });
+        signinState.initialized = true;
+      }
+      button.innerHTML = "";
+      google.accounts.id.renderButton(button, {
+        theme: "outline",
+        size: "large",
+        text: "signin_with",
+        shape: "rectangular",
+        logo_alignment: "right",
+      });
+      signinState.buttonRendered = true;
+    } catch (err) {
+      console.error("[portal:gsi] renderButton failed", err);
+    }
+  });
+}
+
+function showSigninLayer() {
+  const { layer } = getSigninElements();
+  if (!layer) return;
+  if (!signinState.clientId) {
+    hideSigninLayer();
+    return;
+  }
+  layer.style.display = "block";
+  signinState.visible = true;
+  renderSigninButton();
+}
+
+function deliverCredentialToIframe(credential, targetWindow, targetOrigin) {
+  if (!credential) return false;
+  const { iframe } = getStoreIframeElements();
+  const win = targetWindow || iframe?.contentWindow;
+  if (!win) return false;
+  const origin = targetOrigin || "*";
+  const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
+  let page = state.activePage || "";
+  if (!page && iframe) {
+    try {
+      const src = iframe.dataset?.src || iframe.getAttribute("src") || "";
+      if (src) {
+        page = new URL(src, window.location.href).searchParams.get(PAGE_QUERY_KEY) || "";
+      }
+    } catch (err) {
+      console.warn("[portal:gsi] failed to resolve page for credential delivery", err);
+    }
+  }
+  const payload = { type: "misemaru:gsi-login", credential };
+  if (page) payload.page = page;
+  if (lang) payload.lang = lang;
+  try {
+    win.postMessage(payload, origin);
+    return true;
+  } catch (err) {
+    console.warn("[portal:gsi] failed to deliver credential", err);
+    return false;
+  }
+}
+
+function handleGsiCredential(response) {
+  const credential = response?.credential || "";
+  if (!credential) {
+    console.warn("[portal:gsi] received empty credential");
+    signinState.signedIn = false;
+    signinState.lastCredential = "";
+    signinState.pendingCredential = false;
+    renderSigninButton();
+    return;
+  }
+  signinState.lastCredential = credential;
+  const delivered = deliverCredentialToIframe(credential);
+  signinState.pendingCredential = !delivered;
+  signinState.signedIn = delivered;
+  if (delivered) {
+    hideSigninLayer();
+  }
+  updateSigninButtonVisibility();
+}
+
+function updateSigninButtonVisibility(pageOrUrl) {
+  const { layer } = getSigninElements();
+  if (!layer) return;
+
+  if (signinState.pendingCredential && signinState.lastCredential) {
+    const deliveredNow = deliverCredentialToIframe(signinState.lastCredential);
+    if (deliveredNow) {
+      signinState.pendingCredential = false;
+      signinState.signedIn = true;
+      hideSigninLayer();
+    }
+  }
+
+  let targetPage = "";
+  if (typeof pageOrUrl === "string" && pageOrUrl.length) {
+    try {
+      if (pageOrUrl.includes("://")) {
+        targetPage = new URL(pageOrUrl, window.location.href).searchParams.get("page") || "";
+      } else {
+        targetPage = pageOrUrl;
+      }
+    } catch (err) {
+      console.warn("[portal:gsi] failed to parse page from input", pageOrUrl, err);
+    }
+  }
+  if (!targetPage) targetPage = state.pendingPage || state.activePage || "";
+
+  const body = document.body;
+  const storeActive = !!(body && body.classList && body.classList.contains("store-view"));
+  const shouldShow =
+    SIGNIN_BUTTON_PAGES.has(targetPage) &&
+    !signinState.signedIn &&
+    storeActive &&
+    Boolean(signinState.clientId);
+
+  if (shouldShow) showSigninLayer();
+  else hideSigninLayer();
+}
+
 const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
 
 // 現在 iframe に読み込んでいる GAS 実行 URL（?page なしのベース）
@@ -483,11 +684,13 @@ function collectChildParams(searchParams) {
 function setActivePage(page, params) {
   state.activePage = page ? String(page) : "";
   state.activePageParams = Object.assign({}, params || {});
+  updateSigninButtonVisibility();
 }
 
 function setPendingPage(page, params) {
   state.pendingPage = page ? String(page) : "";
   state.pendingPageParams = Object.assign({}, params || {});
+  updateSigninButtonVisibility();
 }
 
 function buildChildUrl(baseUrl, page, params) {
@@ -737,18 +940,51 @@ try {
             }
           } catch (err) {
             console.warn("[portal] failed to resolve current page for child-ready", err);
+          }
+          updateSigninButtonVisibility(page);
+          if (signinState.lastCredential) {
+            const delivered = deliverCredentialToIframe(signinState.lastCredential, ev.source, ev.origin);
+            signinState.pendingCredential = !delivered;
+            signinState.signedIn = delivered;
+            if (!delivered) {
+              console.warn("[portal:gsi] queued credential delivery for later");
+            }
+          } else {
+            signinState.signedIn = false;
+            const msg = { type: "misemaru:email", guest: true, lang, page };
+            try {
+              console.log("[portal] responding to child-ready (guest)", {
+                msg,
+                targetOrigin: ev.origin,
+              });
+              ev.source.postMessage(msg, ev.origin);
+            } catch (err) {
+              console.warn("[portal] failed to respond to child-ready", err);
+            }
+          }
+          updateSigninButtonVisibility(page);
+          break;
         }
-        const msg = { type: "misemaru:email", guest: true, lang, page };
-        try {
-          console.log("[portal] responding to child-ready", {
-            msg,
-            targetOrigin: ev.origin,
-          });
-          ev.source.postMessage(msg, ev.origin);
-        } catch (err) {
-          console.warn("[portal] failed to respond to child-ready", err);
+
+        case "misemaru:guest-login": {
+          console.log("[portal] guest login requested by child");
+          signinState.signedIn = false;
+          signinState.lastCredential = "";
+          signinState.pendingCredential = false;
+          updateSigninButtonVisibility();
+          showSigninLayer();
+          break;
         }
-        break;
+
+        case "misemaru:token-expired": {
+          console.log("[portal] token expired reported by child");
+          signinState.signedIn = false;
+          signinState.lastCredential = "";
+          signinState.pendingCredential = false;
+          hideSigninLayer();
+          updateSigninButtonVisibility();
+          showSigninLayer();
+          break;
         }
 
         default:
@@ -764,6 +1000,7 @@ try {
 function handlePortalPopState(ev) {
   try {
     const url = new URL(window.location.href);
+    updateSigninButtonVisibility(url.toString());
     let page = getParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
     let params = collectChildParams(url.searchParams);
     const friendlyId = getParamCaseInsensitive(url.searchParams, "id");
@@ -1265,6 +1502,7 @@ function resetStoreIframe(options) {
     window.currentStoreExecUrl = "";
   }
   setActivePage("", {});
+  hideSigninLayer();
 }
 
 function rememberCurrentStoreExecUrl(rawUrl) {
@@ -1323,6 +1561,7 @@ function loadStoreIframe(url) {
   const current = iframe.getAttribute("src") || "";
 
   if (document.body) document.body.classList.remove("store-view");
+  updateSigninButtonVisibility();
 
   if (isAutoOpen) {
     hideInlinePreloader();
@@ -1343,6 +1582,7 @@ function loadStoreIframe(url) {
       wrap.classList.add("active");
       wrap.setAttribute("aria-hidden", "false");
       if (document.body) document.body.classList.add("store-view");
+      updateSigninButtonVisibility();
     });
   }
 
@@ -1354,6 +1594,7 @@ function loadStoreIframe(url) {
       wrap.classList.remove("preloading-inline");
       wrap.setAttribute("aria-hidden", "false");
       if (document.body) document.body.classList.add("store-view");
+      updateSigninButtonVisibility();
     }
     setStoreOverlayMode(null);
     return;
@@ -1388,6 +1629,7 @@ function loadStoreIframe(url) {
       if (document.body) document.body.classList.add("store-view");
     }
     cancelAutoOpen();
+    updateSigninButtonVisibility();
   }
 
   iframe.addEventListener("load", handleLoad);
@@ -2309,6 +2551,8 @@ function init() {
   } else if (friendlyIdParam) {
     launchFriendlyId(friendlyIdParam);
   }
+
+  updateSigninButtonVisibility();
 }
 
 document.addEventListener("DOMContentLoaded", init);
