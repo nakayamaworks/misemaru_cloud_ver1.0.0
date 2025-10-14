@@ -15,6 +15,21 @@ window.MISEMARU.GAS_BASE = "https://script.google.com/macros/s/AKfycbys3tCX1DCOt
 var HOME_URL = "https://nakayamaworks.github.io/misemaru_cloud_ver1.0.0/";
 var ADMIN_URL = window.MISEMARU.GAS_BASE ? window.MISEMARU.GAS_BASE + "?page=32_index_admin" : HOME_URL;
 
+// 旧 iframe 構成との互換用: 親/子で許可する postMessage オリジン
+window.MISEMARU.PARENT_ORIGINS = window.MISEMARU.PARENT_ORIGINS || [
+  "https://nakayamaworks.github.io",
+  "https://watarunakayama1203.github.io"
+];
+try {
+  const gasOrigin = new URL(window.MISEMARU.GAS_BASE).origin;
+  window.MISEMARU.CHILD_ORIGINS = window.MISEMARU.CHILD_ORIGINS || [gasOrigin];
+  if (!window.MISEMARU.CHILD_ORIGINS.includes(gasOrigin)) {
+    window.MISEMARU.CHILD_ORIGINS.push(gasOrigin);
+  }
+} catch (_) {
+  window.MISEMARU.CHILD_ORIGINS = window.MISEMARU.CHILD_ORIGINS || [];
+}
+
 // Language configuration per tenant (client-side only)
 // Default initial language for first-time visitors
 window.MISEMARU.DEFAULT_LANG = window.MISEMARU.DEFAULT_LANG || 'ja';
