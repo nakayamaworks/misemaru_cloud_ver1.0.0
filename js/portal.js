@@ -448,6 +448,12 @@ const CHILD_ORIGINS = (() => {
 })();
 
 function isAllowedChildOrigin(origin) {
+  try {
+    if (!window.__MIS_DEBUG_CHILD_ORIGINS_LOGGED) {
+      console.log("[portal] CHILD_ORIGINS =", Array.from(CHILD_ORIGINS));
+      window.__MIS_DEBUG_CHILD_ORIGINS_LOGGED = true;
+    }
+  } catch (_) {}
   if (!origin) return false;
   if (CHILD_ORIGINS.has(origin)) return true;
   try {
@@ -463,6 +469,15 @@ try {
     "message",
     (ev) => {
       const iframe = document.getElementById("storeIframe");
+      try {
+        console.log("[portal] message received", {
+          origin: ev.origin,
+          type: ev.data && ev.data.type,
+          hasIframe: !!iframe,
+          fromIframe: iframe ? ev.source === iframe.contentWindow : false,
+          currentSrc: iframe && (iframe.dataset?.src || iframe.getAttribute("src") || ""),
+        });
+      } catch (_) {}
       if (!iframe || ev.source !== iframe.contentWindow) return;
 
       const d = ev.data || {};
@@ -502,6 +517,14 @@ try {
               if (v != null && v !== "") url.searchParams.set(k, String(v));
             }
           }
+          try {
+            console.log("[portal] navigate request", {
+              base,
+              page: d.page,
+              params: d.params,
+              resolved: url.toString(),
+            });
+          } catch (_) {}
           rememberCurrentStoreExecUrl(url.toString());
           iframe.dataset.src = url.toString();
           iframe.setAttribute("src", url.toString());
@@ -514,19 +537,20 @@ try {
           let page = "";
           try {
             const src = iframe.dataset?.src || iframe.getAttribute("src") || "";
-            if (src) {
-              page = new URL(src, window.location.href).searchParams.get("page") || "";
-            }
-          } catch (err) {
-            console.warn("[portal] failed to resolve current page for child-ready", err);
+          if (src) {
+            page = new URL(src, window.location.href).searchParams.get("page") || "";
           }
-          const msg = { type: "misemaru:email", guest: true, lang, page };
-          try {
-            ev.source.postMessage(msg, ev.origin);
-          } catch (err) {
-            console.warn("[portal] failed to respond to child-ready", err);
-          }
-          break;
+        } catch (err) {
+          console.warn("[portal] failed to resolve current page for child-ready", err);
+        }
+        const msg = { type: "misemaru:email", guest: true, lang, page };
+        try {
+          console.log("[portal] responding to child-ready", { msg });
+          ev.source.postMessage(msg, ev.origin);
+        } catch (err) {
+          console.warn("[portal] failed to respond to child-ready", err);
+        }
+        break;
         }
 
         default:
