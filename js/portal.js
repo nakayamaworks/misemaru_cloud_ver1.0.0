@@ -427,8 +427,22 @@ window.currentStoreExecUrl = window.currentStoreExecUrl || "";
 
 // --- 子(GAS) → 親(ポータル) 通信ハンドラ ---
 window.addEventListener("message", (ev) => {
+  // --- 安全フィルタ①: iframe からのメッセージだけ通す ---
+  const storeIframe = document.getElementById("storeIframe");
+  if (!storeIframe || ev.source !== storeIframe.contentWindow) {
+    // console.debug("[portal] ignore message from non-store iframe", ev.origin, ev.source);
+    return;
+  }
+
+  // --- 安全フィルタ②: misemaru: プレフィックス以外は無視 ---
   const d = ev.data || {};
-  if (!d.type) return;
+  if (!d.type || !d.type.startsWith("misemaru:")) return;
+
+  // --- 安全フィルタ③: オリジンチェック（GAS実行URLからのものだけ受け取る） ---
+  if (!/^https:\/\/script\.googleusercontent\.com/.test(ev.origin)) {
+    console.warn("[portal] ignoring message from unexpected origin:", ev.origin);
+    return;
+  }
 
   switch (d.type) {
     case "misemaru:height": {
@@ -440,7 +454,10 @@ window.addEventListener("message", (ev) => {
     }
 
     case "misemaru:navigate": {
-      const base = window.currentStoreExecUrl || document.getElementById("storeIframe")?.dataset?.base || "";
+      const base =
+        window.currentStoreExecUrl ||
+        document.getElementById("storeIframe")?.dataset?.base ||
+        "";
       if (!base) {
         console.warn("[portal] navigate requested without known base URL");
         break;
