@@ -418,6 +418,10 @@ const state = {
   directorySource: "",
   directoryLoading: false,
   directoryError: false,
+  activePage: "",
+  activePageParams: {},
+  pendingPage: "",
+  pendingPageParams: {},
 };
 
 const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
@@ -446,6 +450,183 @@ const CHILD_ORIGINS = (() => {
   } catch (_) {}
   return origins;
 })();
+
+const PAGE_QUERY_KEY = "page";
+const RESERVED_PARENT_QUERY_KEYS = new Set([LANG_PARAM.toLowerCase(), GAS_PARAM.toLowerCase(), "id"]);
+
+function sanitizeChildParams(rawParams) {
+  if (!rawParams || typeof rawParams !== "object") return {};
+  const sanitized = {};
+  Object.entries(rawParams).forEach(([key, value]) => {
+    if (!key) return;
+    const normalizedKey = String(key);
+    if (normalizedKey.toLowerCase() === PAGE_QUERY_KEY) return;
+    if (value == null || value === "") return;
+    sanitized[normalizedKey] = String(value);
+  });
+  return sanitized;
+}
+
+function collectChildParams(searchParams) {
+  if (!searchParams) return {};
+  const params = {};
+  searchParams.forEach((value, key) => {
+    if (!key) return;
+    const lowerKey = String(key).toLowerCase();
+    if (lowerKey === PAGE_QUERY_KEY) return;
+    if (value == null || value === "") return;
+    params[key] = String(value);
+  });
+  return params;
+}
+
+function setActivePage(page, params) {
+  state.activePage = page ? String(page) : "";
+  state.activePageParams = Object.assign({}, params || {});
+}
+
+function setPendingPage(page, params) {
+  state.pendingPage = page ? String(page) : "";
+  state.pendingPageParams = Object.assign({}, params || {});
+}
+
+function buildChildUrl(baseUrl, page, params) {
+  if (!baseUrl) return "";
+  try {
+    const url = new URL(baseUrl, window.location.href);
+    if (page) url.searchParams.set(PAGE_QUERY_KEY, String(page));
+    else url.searchParams.delete(PAGE_QUERY_KEY);
+    const sanitized = sanitizeChildParams(params);
+    Object.keys(state.activePageParams || {}).forEach((key) => {
+      if (RESERVED_PARENT_QUERY_KEYS.has(String(key).toLowerCase())) return;
+      if (!Object.prototype.hasOwnProperty.call(sanitized, key)) {
+        url.searchParams.delete(key);
+      }
+    });
+    Object.entries(sanitized).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+    return url.toString();
+  } catch (err) {
+    console.warn("[portal] failed to build child URL", err);
+    return "";
+  }
+}
+
+function setFrameUrlReplace(url) {
+  if (!url) return;
+  rememberCurrentStoreExecUrl(url);
+  const iframe = document.getElementById("storeIframe");
+  if (!iframe) return;
+  const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
+  if (current === url) return;
+  iframe.dataset.src = url;
+  try {
+    if (iframe.contentWindow && iframe.contentWindow.location) {
+      iframe.contentWindow.location.replace(url);
+      return;
+    }
+  } catch (_) {
+    /* ignore read errors, fallback to direct src set */
+  }
+  iframe.setAttribute("src", url);
+}
+
+function syncParentHistory(page, params, mode) {
+  const historyMode = mode === "replace" ? "replace" : "push";
+  const sanitized = sanitizeChildParams(params);
+  try {
+    const url = new URL(window.location.href);
+    if (page) url.searchParams.set(PAGE_QUERY_KEY, String(page));
+    else deleteParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
+    Object.keys(state.activePageParams || {}).forEach((key) => {
+      if (RESERVED_PARENT_QUERY_KEYS.has(String(key).toLowerCase())) return;
+      if (!Object.prototype.hasOwnProperty.call(sanitized, key)) {
+        url.searchParams.delete(key);
+      }
+    });
+    Object.entries(sanitized).forEach(([key, value]) => {
+      if (RESERVED_PARENT_QUERY_KEYS.has(String(key).toLowerCase())) return;
+      url.searchParams.set(key, value);
+    });
+    const statePayload = { page: page ? String(page) : "", params: sanitized };
+    if (historyMode === "replace") {
+      window.history.replaceState(statePayload, "", url.toString());
+    } else {
+      window.history.pushState(statePayload, "", url.toString());
+    }
+    setActivePage(statePayload.page, statePayload.params);
+  } catch (err) {
+    console.warn("[portal] failed to sync history", err);
+    setActivePage(page, sanitized);
+  }
+}
+
+function applyChildNavigation(page, params, options) {
+  const opts = Object.assign({ historyMode: "push", skipHistory: false, absoluteUrl: "" }, options || {});
+  const sanitized = sanitizeChildParams(params);
+  const historyMode = opts.historyMode === "replace" ? "replace" : "push";
+  if (!page) {
+    if (!opts.skipHistory) {
+      syncParentHistory("", {}, "replace");
+    } else {
+      setActivePage("", {});
+    }
+    setPendingPage("", {});
+    resetStoreIframe({ preserveBase: true });
+    return;
+  }
+
+  if (opts.absoluteUrl) {
+    setFrameUrlReplace(opts.absoluteUrl);
+    setPendingPage("", {});
+    if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
+    else setActivePage(page, sanitized);
+    return;
+  }
+
+  const iframe = document.getElementById("storeIframe");
+  const base =
+    opts.base ||
+    currentStoreExecUrl ||
+    (iframe && (iframe.dataset?.base || iframe.dataset?.src)) ||
+    "";
+  if (!base) {
+    setPendingPage(page, sanitized);
+    if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
+    else setActivePage(page, sanitized);
+    return;
+  }
+  const nextUrl = buildChildUrl(base, page, sanitized);
+  if (!nextUrl) return;
+  setFrameUrlReplace(nextUrl);
+  setPendingPage("", {});
+  if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
+  else setActivePage(page, sanitized);
+}
+
+function initializeHistoryFromLocation(url) {
+  if (!url) return;
+  try {
+    const page = getParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
+    if (page) {
+      const params = collectChildParams(url.searchParams);
+      const statePayload = { page, params };
+      window.history.replaceState(statePayload, "", url.toString());
+      setActivePage(page, params);
+      setPendingPage(page, params);
+    } else {
+      const currentState = window.history.state;
+      if (!currentState || typeof currentState !== "object" || !Object.prototype.hasOwnProperty.call(currentState, "page")) {
+        window.history.replaceState({ page: "", params: {} }, "", url.toString());
+      }
+      setActivePage("", {});
+      setPendingPage("", {});
+    }
+  } catch (err) {
+    console.warn("[portal] failed to initialize history", err);
+  }
+}
 
 function isAllowedChildOrigin(origin) {
   try {
@@ -508,35 +689,40 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
-          const base = currentStoreExecUrl || iframe.dataset?.base || "";
-          if (!base) {
-            console.warn("[portal] navigate requested without known base URL");
+          const historyMode = d.replace ? "replace" : "push";
+          if (typeof d.page === "string" && d.page) {
+            try {
+              console.log("[portal] navigate request", {
+                page: d.page,
+                params: d.params || {},
+                mode: historyMode,
+              });
+            } catch (_) {}
+            applyChildNavigation(d.page, d.params || {}, { historyMode });
             break;
           }
-          let url;
-          try {
-            url = new URL(base);
-          } catch (err) {
-            console.warn("[portal] invalid base URL for navigation", base, err);
-            break;
-          }
-          if (d.page) url.searchParams.set("page", d.page);
-          if (d.params && typeof d.params === "object") {
-            for (const [k, v] of Object.entries(d.params)) {
-              if (v != null && v !== "") url.searchParams.set(k, String(v));
+          if (typeof d.url === "string" && d.url) {
+            try {
+              const baseCandidate = currentStoreExecUrl || iframe.dataset?.base || window.location.href;
+              const absolute = new URL(d.url, baseCandidate);
+              const page = absolute.searchParams.get(PAGE_QUERY_KEY) || "";
+              const params = collectChildParams(absolute.searchParams);
+              console.log("[portal] navigate request", {
+                page,
+                params,
+                mode: historyMode,
+                absoluteUrl: absolute.toString(),
+              });
+              applyChildNavigation(page, params, {
+                historyMode,
+                absoluteUrl: absolute.toString(),
+              });
+            } catch (err) {
+              console.warn("[portal] navigate request had invalid URL", d.url, err);
             }
+            break;
           }
-          try {
-            console.log("[portal] navigate request", {
-              base,
-              page: d.page,
-              params: d.params,
-              resolved: url.toString(),
-            });
-          } catch (_) {}
-          rememberCurrentStoreExecUrl(url.toString());
-          iframe.dataset.src = url.toString();
-          iframe.setAttribute("src", url.toString());
+          console.warn("[portal] navigate request missing page/url", d);
           break;
         }
 
@@ -574,6 +760,34 @@ try {
 } catch (err) {
   console.error("[portal] failed to attach message listener:", err);
 }
+
+function handlePortalPopState(ev) {
+  try {
+    const url = new URL(window.location.href);
+    let page = getParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
+    let params = collectChildParams(url.searchParams);
+    if (ev && ev.state && typeof ev.state === "object") {
+      if (typeof ev.state.page === "string" && ev.state.page) {
+        page = ev.state.page;
+      }
+      if (ev.state.params && typeof ev.state.params === "object") {
+        params = sanitizeChildParams(ev.state.params);
+      }
+    }
+    if (page) {
+      const statePayload = { page, params };
+      window.history.replaceState(statePayload, "", url.toString());
+      applyChildNavigation(page, params, { historyMode: "replace", skipHistory: true });
+    } else {
+      window.history.replaceState({ page: "", params: {} }, "", url.toString());
+      applyChildNavigation("", {}, { historyMode: "replace", skipHistory: true });
+    }
+  } catch (err) {
+    console.warn("[portal] popstate handling failed", err);
+  }
+}
+
+window.addEventListener("popstate", handlePortalPopState);
 
 function jsonpRequest(urlInput, options) {
   const opts = Object.assign({ timeout: 10000 }, options || {});
@@ -701,17 +915,19 @@ function updateUrlParam(lang, gasId, options) {
     deleteParamCaseInsensitive(url.searchParams, "Id");
     deleteParamCaseInsensitive(url.searchParams, "id");
     deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
-    if (friendly) {
-      url.searchParams.set("id", friendly);
-    } else if (sanitizedGasId) {
-      url.searchParams.set(GAS_PARAM, sanitizedGasId);
-    } else {
-      deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
-    }
-    window.history.replaceState({}, "", url.toString());
-  } catch (_) {
-    /* ignore */
+  if (friendly) {
+    url.searchParams.set("id", friendly);
+  } else if (sanitizedGasId) {
+    url.searchParams.set(GAS_PARAM, sanitizedGasId);
+  } else {
+    deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
   }
+  const currentState =
+    window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+  window.history.replaceState(currentState, "", url.toString());
+} catch (_) {
+  /* ignore */
+}
 }
 
 function populateLanguageSelects() {
@@ -987,13 +1203,16 @@ function getStoreIframeElements() {
   return { wrap, iframe };
 }
 
-function resetStoreIframe() {
+function resetStoreIframe(options) {
   // 埋め込み状態を初期化し、フルスクリーン表示を閉じる
+  const opts = Object.assign({ preserveBase: false }, options || {});
   const { wrap, iframe } = getStoreIframeElements();
   if (iframe) {
     iframe.removeAttribute("src");
     iframe.dataset.src = "";
-    delete iframe.dataset.base;
+    if (!opts.preserveBase) {
+      delete iframe.dataset.base;
+    }
   }
   if (wrap) {
     wrap.classList.remove("active");
@@ -1006,8 +1225,11 @@ function resetStoreIframe() {
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   setStoreOverlayMode(null);
   document.body.classList.remove("store-view");
-  currentStoreExecUrl = "";
-  window.currentStoreExecUrl = "";
+  if (!opts.preserveBase) {
+    currentStoreExecUrl = "";
+    window.currentStoreExecUrl = "";
+  }
+  setActivePage("", {});
 }
 
 function rememberCurrentStoreExecUrl(rawUrl) {
@@ -1016,16 +1238,28 @@ function rememberCurrentStoreExecUrl(rawUrl) {
     window.currentStoreExecUrl = "";
     const iframe = document.getElementById("storeIframe");
     if (iframe) delete iframe.dataset.base;
+    setActivePage("", {});
     return "";
   }
+  let page = "";
+  let params = {};
   try {
     const url = new URL(rawUrl, window.location.href);
+    page = url.searchParams.get(PAGE_QUERY_KEY) || "";
+    params = collectChildParams(url.searchParams);
     const base = new URL(url.toString());
-    base.searchParams.delete("page");
+    base.searchParams.delete(PAGE_QUERY_KEY);
+    Object.keys(params).forEach((key) => {
+      if (RESERVED_PARENT_QUERY_KEYS.has(String(key).toLowerCase())) return;
+      base.searchParams.delete(key);
+    });
     currentStoreExecUrl = base.toString();
   } catch (err) {
     currentStoreExecUrl = rawUrl;
+    page = "";
+    params = {};
   }
+  setActivePage(page, params);
   window.currentStoreExecUrl = currentStoreExecUrl;
   const iframe = document.getElementById("storeIframe");
   if (iframe) iframe.dataset.base = currentStoreExecUrl;
@@ -1039,6 +1273,15 @@ function loadStoreIframe(url) {
   if (!url) {
     resetStoreIframe();
     return;
+  }
+
+  let targetUrl = url;
+  if (state.pendingPage) {
+    const pending = buildChildUrl(url, state.pendingPage, state.pendingPageParams);
+    if (pending) {
+      targetUrl = pending;
+      setPendingPage("", {});
+    }
   }
 
   const isAutoOpen = !!state.autoOpenActive;
@@ -1068,7 +1311,7 @@ function loadStoreIframe(url) {
     });
   }
 
-  if (current === url) {
+  if (current === targetUrl) {
     if (!isAutoOpen) {
       clearInlinePreloaderFallback();
       hideInlinePreloader();
@@ -1114,9 +1357,9 @@ function loadStoreIframe(url) {
 
   iframe.addEventListener("load", handleLoad);
   iframe.addEventListener("error", handleError, { once: true });
-  rememberCurrentStoreExecUrl(url);
-  iframe.dataset.src = url;
-  iframe.setAttribute("src", url);
+  rememberCurrentStoreExecUrl(targetUrl);
+  iframe.dataset.src = targetUrl;
+  iframe.setAttribute("src", targetUrl);
 }
 
 function openStoreInline() {
@@ -1978,6 +2221,7 @@ async function launchFriendlyId(friendlyId) {
 function init() {
   populateLanguageSelects();
   const url = new URL(window.location.href);
+  initializeHistoryFromLocation(url);
   const langParam = getParamCaseInsensitive(url.searchParams, LANG_PARAM);
   const friendlyIdParamRaw = getParamCaseInsensitive(url.searchParams, "id") || getParamCaseInsensitive(url.searchParams, "Id");
   const urlLang = resolveLang(langParam);
