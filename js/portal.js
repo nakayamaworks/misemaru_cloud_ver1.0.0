@@ -766,6 +766,8 @@ function handlePortalPopState(ev) {
     const url = new URL(window.location.href);
     let page = getParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
     let params = collectChildParams(url.searchParams);
+    const friendlyId = getParamCaseInsensitive(url.searchParams, "id");
+    const gasIdParam = getParamCaseInsensitive(url.searchParams, GAS_PARAM);
     if (ev && ev.state && typeof ev.state === "object") {
       if (typeof ev.state.page === "string" && ev.state.page) {
         page = ev.state.page;
@@ -778,10 +780,37 @@ function handlePortalPopState(ev) {
       const statePayload = { page, params };
       window.history.replaceState(statePayload, "", url.toString());
       applyChildNavigation(page, params, { historyMode: "replace", skipHistory: true });
-    } else {
-      window.history.replaceState({ page: "", params: {} }, "", url.toString());
-      applyChildNavigation("", {}, { historyMode: "replace", skipHistory: true });
+      return;
     }
+
+    if (friendlyId || gasIdParam) {
+      const statePayload = { page: "", params: {} };
+      window.history.replaceState(statePayload, "", url.toString());
+      setActivePage("", {});
+      setPendingPage("", {});
+      const reopened = (() => {
+        if (state.store && resolveEmbedUrl(state.store)) {
+          openStoreInline();
+          return true;
+        }
+        if (friendlyId) {
+          launchFriendlyId(friendlyId);
+          return true;
+        }
+        if (gasIdParam) {
+          scheduleAutoLookup(gasIdParam);
+          return true;
+        }
+        return false;
+      })();
+      if (!reopened) {
+        resetStoreIframe({ preserveBase: true });
+      }
+      return;
+    }
+
+    window.history.replaceState({ page: "", params: {} }, "", url.toString());
+    resetStoreIframe();
   } catch (err) {
     console.warn("[portal] popstate handling failed", err);
   }
@@ -915,19 +944,25 @@ function updateUrlParam(lang, gasId, options) {
     deleteParamCaseInsensitive(url.searchParams, "Id");
     deleteParamCaseInsensitive(url.searchParams, "id");
     deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
-  if (friendly) {
-    url.searchParams.set("id", friendly);
-  } else if (sanitizedGasId) {
-    url.searchParams.set(GAS_PARAM, sanitizedGasId);
-  } else {
-    deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
+    if (friendly) {
+      url.searchParams.set("id", friendly);
+    } else if (sanitizedGasId) {
+      url.searchParams.set(GAS_PARAM, sanitizedGasId);
+    } else {
+      deleteParamCaseInsensitive(url.searchParams, GAS_PARAM);
+    }
+    const prev = window.history.state;
+    const safePrev =
+      prev && typeof prev === "object" && Object.prototype.hasOwnProperty.call(prev, "page")
+        ? prev
+        : {
+            page: state.activePage || "",
+            params: Object.assign({}, state.activePageParams || {}),
+          };
+    window.history.replaceState(safePrev, "", url.toString());
+  } catch (_) {
+    /* ignore */
   }
-  const currentState =
-    window.history.state && typeof window.history.state === "object" ? window.history.state : {};
-  window.history.replaceState(currentState, "", url.toString());
-} catch (_) {
-  /* ignore */
-}
 }
 
 function populateLanguageSelects() {
