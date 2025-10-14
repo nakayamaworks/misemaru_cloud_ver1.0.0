@@ -438,8 +438,13 @@ window.addEventListener("message", (ev) => {
   const d = ev.data || {};
   if (!d.type || !d.type.startsWith("misemaru:")) return;
 
-  // --- 安全フィルタ③: オリジンチェック（GAS実行URLからのものだけ受け取る） ---
-  if (!/^https:\/\/script\.googleusercontent\.com/.test(ev.origin)) {
+  /// --- 安全フィルタ③: オリジンチェック（GAS実行URL or GitHub Pages のみ許可） ---
+  const allowedOrigins = [
+    "https://nakayamaworks.github.io",
+    "https://script.googleusercontent.com",
+    "https://script.google.com"
+  ];
+  if (!allowedOrigins.some(o => ev.origin.startsWith(o))) {
     console.warn("[portal] ignoring message from unexpected origin:", ev.origin);
     return;
   }
