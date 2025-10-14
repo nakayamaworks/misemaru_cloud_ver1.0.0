@@ -426,11 +426,10 @@ const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
 window.currentStoreExecUrl = window.currentStoreExecUrl || "";
 
 // --- 子(GAS) → 親(ポータル) 通信ハンドラ ---
-window.addEventListener("message", (ev) => {
+(window.top || window).addEventListener("message", (ev) => {
   // --- 安全フィルタ①: iframe からのメッセージだけ通す ---
   const storeIframe = document.getElementById("storeIframe");
   if (!storeIframe || ev.source !== storeIframe.contentWindow) {
-    // console.debug("[portal] ignore message from non-store iframe", ev.origin, ev.source);
     return;
   }
 
@@ -438,11 +437,14 @@ window.addEventListener("message", (ev) => {
   const d = ev.data || {};
   if (!d.type || !d.type.startsWith("misemaru:")) return;
 
-  /// --- 安全フィルタ③: オリジンチェック（GAS実行URL or GitHub Pages のみ許可） ---
+  // 🔒 キャプチャした時点で他の listener に渡さない
+  ev.stopImmediatePropagation();
+
+  // --- 安全フィルタ③: オリジンチェック（GAS実行URL or GitHub Pages のみ許可） ---
   const allowedOrigins = [
     "https://nakayamaworks.github.io",
     "https://script.googleusercontent.com",
-    "https://script.google.com"
+    "https://script.google.com",
   ];
   if (!allowedOrigins.some(o => ev.origin.startsWith(o))) {
     console.warn("[portal] ignoring message from unexpected origin:", ev.origin);
@@ -504,7 +506,7 @@ window.addEventListener("message", (ev) => {
     default:
       break;
   }
-});
+}, true);
 
 function jsonpRequest(urlInput, options) {
   const opts = Object.assign({ timeout: 10000 }, options || {});
