@@ -485,8 +485,11 @@ try {
 
       ev.stopImmediatePropagation();
 
-      if (!isAllowedChildOrigin(ev.origin)) {
-        console.warn("[portal] ignoring message from unexpected origin:", ev.origin);
+      const originAllowed = isAllowedChildOrigin(ev.origin);
+      if (!originAllowed) {
+        console.warn("[portal] ignoring message from unexpected origin:", ev.origin, {
+          allowedOrigins: Array.from(CHILD_ORIGINS),
+        });
         return;
       }
 
@@ -545,7 +548,10 @@ try {
         }
         const msg = { type: "misemaru:email", guest: true, lang, page };
         try {
-          console.log("[portal] responding to child-ready", { msg });
+          console.log("[portal] responding to child-ready", {
+            msg,
+            targetOrigin: ev.origin,
+          });
           ev.source.postMessage(msg, ev.origin);
         } catch (err) {
           console.warn("[portal] failed to respond to child-ready", err);
