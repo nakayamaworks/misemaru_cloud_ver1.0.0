@@ -478,7 +478,9 @@ try {
           currentSrc: iframe && (iframe.dataset?.src || iframe.getAttribute("src") || ""),
         });
       } catch (_) {}
-      if (!iframe || ev.source !== iframe.contentWindow) return;
+      if (!iframe) {
+        console.warn("[portal] message received but iframe not found");
+      }
 
       const d = ev.data || {};
       if (!d.type || !d.type.startsWith("misemaru:")) return;
@@ -496,12 +498,16 @@ try {
       switch (d.type) {
         case "misemaru:height": {
           const h = Number(d.height) || 0;
-          if (!h) break;
+          if (!h || !iframe) break;
           iframe.style.height = `${h}px`;
           break;
         }
 
         case "misemaru:navigate": {
+          if (!iframe) {
+            console.warn("[portal] navigate requested but iframe missing");
+            break;
+          }
           const base = currentStoreExecUrl || iframe.dataset?.base || "";
           if (!base) {
             console.warn("[portal] navigate requested without known base URL");
@@ -539,12 +545,12 @@ try {
           const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
           let page = "";
           try {
-            const src = iframe.dataset?.src || iframe.getAttribute("src") || "";
-          if (src) {
-            page = new URL(src, window.location.href).searchParams.get("page") || "";
-          }
-        } catch (err) {
-          console.warn("[portal] failed to resolve current page for child-ready", err);
+            const src = iframe?.dataset?.src || iframe?.getAttribute("src") || "";
+            if (src) {
+              page = new URL(src, window.location.href).searchParams.get("page") || "";
+            }
+          } catch (err) {
+            console.warn("[portal] failed to resolve current page for child-ready", err);
         }
         const msg = { type: "misemaru:email", guest: true, lang, page };
         try {
