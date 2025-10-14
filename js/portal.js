@@ -426,87 +426,91 @@ const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
 window.currentStoreExecUrl = window.currentStoreExecUrl || "";
 
 // --- 子(GAS) → 親(ポータル) 通信ハンドラ ---
-(window.top || window).addEventListener("message", (ev) => {
-  // --- 安全フィルタ①: iframe からのメッセージだけ通す ---
-  const storeIframe = document.getElementById("storeIframe");
-  if (!storeIframe || ev.source !== storeIframe.contentWindow) {
-    return;
-  }
-
-  // --- 安全フィルタ②: misemaru: プレフィックス以外は無視 ---
-  const d = ev.data || {};
-  if (!d.type || !d.type.startsWith("misemaru:")) return;
-
-  // 🔒 キャプチャした時点で他の listener に渡さない
-  ev.stopImmediatePropagation();
-
-  // --- 安全フィルタ③: オリジンチェック（GAS実行URL or GitHub Pages のみ許可） ---
-  const allowedOrigins = [
-    "https://nakayamaworks.github.io",
-    "https://script.googleusercontent.com",
-    "https://script.google.com",
-  ];
-  if (!allowedOrigins.some(o => ev.origin.startsWith(o))) {
-    console.warn("[portal] ignoring message from unexpected origin:", ev.origin);
-    return;
-  }
-
-  switch (d.type) {
-    case "misemaru:height": {
-      const h = Number(d.height) || 0;
-      if (!h) break;
-      const iframe = document.getElementById("storeIframe");
-      if (iframe) iframe.style.height = `${h}px`;
-      break;
+try {
+  window.top.addEventListener("message", (ev) => {
+    // --- 安全フィルタ①: iframe からのメッセージだけ通す ---
+    const storeIframe = window.top.document.getElementById("storeIframe");
+    if (!storeIframe || ev.source !== storeIframe.contentWindow) {
+      return;
     }
 
-    case "misemaru:navigate": {
-      const base =
-        window.currentStoreExecUrl ||
-        document.getElementById("storeIframe")?.dataset?.base ||
-        "";
-      if (!base) {
-        console.warn("[portal] navigate requested without known base URL");
+    // --- 安全フィルタ②: misemaru: プレフィックス以外は無視 ---
+    const d = ev.data || {};
+    if (!d.type || !d.type.startsWith("misemaru:")) return;
+
+    // 🔒 他の listener に渡さない
+    ev.stopImmediatePropagation();
+
+    // --- 安全フィルタ③: オリジンチェック ---
+    const allowedOrigins = [
+      "https://nakayamaworks.github.io",
+      "https://script.googleusercontent.com",
+      "https://script.google.com",
+    ];
+    if (!allowedOrigins.some(o => ev.origin.startsWith(o))) {
+      console.warn("[portal] ignoring message from unexpected origin:", ev.origin);
+      return;
+    }
+
+    switch (d.type) {
+      case "misemaru:height": {
+        const h = Number(d.height) || 0;
+        if (!h) break;
+        const iframe = window.top.document.getElementById("storeIframe");
+        if (iframe) iframe.style.height = `${h}px`;
         break;
       }
-      let url;
-      try {
-        url = new URL(base);
-      } catch (err) {
-        console.warn("[portal] invalid base URL for navigation", base, err);
-        break;
-      }
-      if (d.page) url.searchParams.set("page", d.page);
-      if (d.params && typeof d.params === "object") {
-        for (const [k, v] of Object.entries(d.params)) {
-          if (v != null && v !== "") url.searchParams.set(k, String(v));
+
+      case "misemaru:navigate": {
+        const base =
+          window.top.currentStoreExecUrl ||
+          window.top.document.getElementById("storeIframe")?.dataset?.base ||
+          "";
+        if (!base) {
+          console.warn("[portal] navigate requested without known base URL");
+          break;
         }
+        let url;
+        try {
+          url = new URL(base);
+        } catch (err) {
+          console.warn("[portal] invalid base URL for navigation", base, err);
+          break;
+        }
+        if (d.page) url.searchParams.set("page", d.page);
+        if (d.params && typeof d.params === "object") {
+          for (const [k, v] of Object.entries(d.params)) {
+            if (v != null && v !== "") url.searchParams.set(k, String(v));
+          }
+        }
+        window.top.rememberCurrentStoreExecUrl(url.toString());
+        const iframe = window.top.document.getElementById("storeIframe");
+        if (iframe) {
+          iframe.dataset.src = url.toString();
+          iframe.setAttribute("src", url.toString());
+        }
+        break;
       }
-      rememberCurrentStoreExecUrl(url.toString());
-      const iframe = document.getElementById("storeIframe");
-      if (iframe) {
-        iframe.dataset.src = url.toString();
-        iframe.setAttribute("src", url.toString());
-      }
-      break;
-    }
 
-    case "misemaru:child-ready": {
-      console.log("[portal] child ready");
-      const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
-      const msg = { type: "misemaru:email", guest: true, lang };
-      try {
-        ev.source.postMessage(msg, ev.origin);
-      } catch (err) {
-        console.warn("[portal] failed to respond to child-ready", err);
+      case "misemaru:child-ready": {
+        console.log("[portal] child ready");
+        const lang = window.top.state?.lang || window.top.safeLocalStorageGet?.(LS_KEY) || "ja";
+        const msg = { type: "misemaru:email", guest: true, lang };
+        try {
+          ev.source.postMessage(msg, ev.origin);
+        } catch (err) {
+          console.warn("[portal] failed to respond to child-ready", err);
+        }
+        break;
       }
-      break;
-    }
 
-    default:
-      break;
-  }
-}, true);
+      default:
+        break;
+    }
+  }, true);
+} catch (err) {
+  console.error("[portal] failed to attach message listener to top window:", err);
+}
 
 function jsonpRequest(urlInput, options) {
   const opts = Object.assign({ timeout: 10000 }, options || {});
