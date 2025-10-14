@@ -422,6 +422,68 @@ const state = {
 
 const registryApi = (window.MISEMARU && window.MISEMARU.REGISTRY_API) || "";
 
+// 現在 iframe に読み込んでいる GAS 実行 URL（?page なしのベース）
+window.currentStoreExecUrl = window.currentStoreExecUrl || "";
+
+// --- 子(GAS) → 親(ポータル) 通信ハンドラ ---
+window.addEventListener("message", (ev) => {
+  const d = ev.data || {};
+  if (!d.type) return;
+
+  switch (d.type) {
+    case "misemaru:height": {
+      const h = Number(d.height) || 0;
+      if (!h) break;
+      const iframe = document.getElementById("storeIframe");
+      if (iframe) iframe.style.height = `${h}px`;
+      break;
+    }
+
+    case "misemaru:navigate": {
+      const base = window.currentStoreExecUrl || document.getElementById("storeIframe")?.dataset?.base || "";
+      if (!base) {
+        console.warn("[portal] navigate requested without known base URL");
+        break;
+      }
+      let url;
+      try {
+        url = new URL(base);
+      } catch (err) {
+        console.warn("[portal] invalid base URL for navigation", base, err);
+        break;
+      }
+      if (d.page) url.searchParams.set("page", d.page);
+      if (d.params && typeof d.params === "object") {
+        for (const [k, v] of Object.entries(d.params)) {
+          if (v != null && v !== "") url.searchParams.set(k, String(v));
+        }
+      }
+      rememberCurrentStoreExecUrl(url.toString());
+      const iframe = document.getElementById("storeIframe");
+      if (iframe) {
+        iframe.dataset.src = url.toString();
+        iframe.setAttribute("src", url.toString());
+      }
+      break;
+    }
+
+    case "misemaru:child-ready": {
+      console.log("[portal] child ready");
+      const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
+      const msg = { type: "misemaru:email", guest: true, lang };
+      try {
+        ev.source.postMessage(msg, ev.origin);
+      } catch (err) {
+        console.warn("[portal] failed to respond to child-ready", err);
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+});
+
 function jsonpRequest(urlInput, options) {
   const opts = Object.assign({ timeout: 10000 }, options || {});
   const url = urlInput instanceof URL ? urlInput : new URL(urlInput);
@@ -840,6 +902,7 @@ function resetStoreIframe() {
   if (iframe) {
     iframe.removeAttribute("src");
     iframe.dataset.src = "";
+    delete iframe.dataset.base;
   }
   if (wrap) {
     wrap.classList.remove("active");
@@ -852,6 +915,27 @@ function resetStoreIframe() {
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   setStoreOverlayMode(null);
   document.body.classList.remove("store-view");
+  window.currentStoreExecUrl = "";
+}
+
+function rememberCurrentStoreExecUrl(rawUrl) {
+  if (!rawUrl) {
+    window.currentStoreExecUrl = "";
+    const iframe = document.getElementById("storeIframe");
+    if (iframe) delete iframe.dataset.base;
+    return "";
+  }
+  try {
+    const url = new URL(rawUrl, window.location.href);
+    const base = new URL(url.toString());
+    base.searchParams.delete("page");
+    window.currentStoreExecUrl = base.toString();
+  } catch (err) {
+    window.currentStoreExecUrl = rawUrl;
+  }
+  const iframe = document.getElementById("storeIframe");
+  if (iframe) iframe.dataset.base = window.currentStoreExecUrl;
+  return window.currentStoreExecUrl;
 }
 
 function loadStoreIframe(url) {
@@ -936,6 +1020,7 @@ function loadStoreIframe(url) {
 
   iframe.addEventListener("load", handleLoad);
   iframe.addEventListener("error", handleError, { once: true });
+  rememberCurrentStoreExecUrl(url);
   iframe.dataset.src = url;
   iframe.setAttribute("src", url);
 }
