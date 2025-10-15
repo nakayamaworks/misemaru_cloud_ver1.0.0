@@ -790,6 +790,9 @@ function setFrameUrlReplace(url) {
     hidePortalOverlay();
     return;
   }
+  try {
+    console.log("[portal] setFrameUrlReplace", { url });
+  } catch (_) {}
   rememberCurrentStoreExecUrl(url);
   const iframe = document.getElementById("storeIframe");
   if (!iframe) {
@@ -800,6 +803,9 @@ function setFrameUrlReplace(url) {
     try { return iframe.contentWindow || null; } catch (_) { return null; }
   })();
   const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
+  try {
+    console.log("[portal] setFrameUrlReplace current", { current });
+  } catch (_) {}
   if (current === url) {
     currentChildWindow = null;
     try {
@@ -856,6 +862,15 @@ function applyChildNavigation(page, params, options) {
   const opts = Object.assign({ historyMode: "push", skipHistory: false, absoluteUrl: "" }, options || {});
   const sanitized = sanitizeChildParams(params);
   const historyMode = opts.historyMode === "replace" ? "replace" : "push";
+  try {
+    console.log("[portal] applyChildNavigation", {
+      page,
+      params: sanitized,
+      opts,
+      activePage: state.activePage,
+      pendingPage: state.pendingPage
+    });
+  } catch (_) {}
   if (!page) {
     if (!opts.skipHistory) {
       syncParentHistory("", {}, "replace");
@@ -882,6 +897,14 @@ function applyChildNavigation(page, params, options) {
     currentStoreExecUrl ||
     (iframe && (iframe.dataset?.base || iframe.dataset?.src)) ||
     "";
+  try {
+    console.log("[portal] applyChildNavigation base", {
+      base,
+      iframeSrc: iframe ? iframe.getAttribute("src") : null,
+      datasetSrc: iframe?.dataset?.src || null,
+      currentStoreExecUrl
+    });
+  } catch (_) {}
   if (!base) {
     setPendingPage(page, sanitized);
     if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
@@ -1675,6 +1698,9 @@ function rememberCurrentStoreExecUrl(rawUrl) {
 function loadStoreIframe(url) {
   // GAS 側のページを iframe に読み込み、ロード中はオーバーレイを表示する
   const { wrap, iframe } = getStoreIframeElements();
+  try {
+    console.log("[portal] loadStoreIframe invoked", { url, hasIframe: !!iframe });
+  } catch (_) {}
   if (!iframe || !wrap) return;
   if (!url) {
     resetStoreIframe();
