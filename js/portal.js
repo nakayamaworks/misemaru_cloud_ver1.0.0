@@ -437,20 +437,44 @@ function showPortalOverlay() {
   const existing = document.getElementById("portalNavOverlay");
   if (existing) existing.remove();
 
+  if (!document.getElementById("portalNavOverlayStyles")) {
+    const styleEl = document.createElement("style");
+    styleEl.id = "portalNavOverlayStyles";
+    styleEl.textContent = `
+@keyframes portal-nav-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+#portalNavOverlay .portal-mini-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: portal-nav-spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+#portalNavOverlay .portal-nav-message {
+  font-weight: 600;
+  color: #0f172a;
+}`;
+    (document.head || body).appendChild(styleEl);
+  }
+
   const overlay = document.createElement("div");
   overlay.id = "portalNavOverlay";
   overlay.style.position = "fixed";
   overlay.style.inset = "0";
   overlay.style.zIndex = "9999";
   overlay.style.backdropFilter = "blur(4px)";
-  overlay.style.background = "rgba(255,255,255,0.5)";
+  overlay.style.background = "rgba(255,255,255,0.55)";
   overlay.style.display = "flex";
   overlay.style.alignItems = "center";
   overlay.style.justifyContent = "center";
   overlay.innerHTML = `
-    <div style="text-align:center;">
-      <div class="spinner-border text-primary" role="status"></div>
-      <div style="margin-top:8px;font-weight:bold;">読み込み中…</div>
+    <div style="text-align:center; font-size:15px;">
+      <div class="portal-mini-spinner" aria-hidden="true"></div>
+      <div class="portal-nav-message">読み込み中…</div>
     </div>`;
   body.appendChild(overlay);
   portalOverlayTimer = window.setTimeout(() => {
@@ -761,12 +785,21 @@ function buildChildUrl(baseUrl, page, params) {
 }
 
 function setFrameUrlReplace(url) {
-  if (!url) return;
+  if (!url) {
+    hidePortalOverlay();
+    return;
+  }
   rememberCurrentStoreExecUrl(url);
   const iframe = document.getElementById("storeIframe");
-  if (!iframe) return;
+  if (!iframe) {
+    hidePortalOverlay();
+    return;
+  }
   const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
-  if (current === url) return;
+  if (current === url) {
+    hidePortalOverlay();
+    return;
+  }
   iframe.dataset.src = url;
   try {
     if (iframe.contentWindow && iframe.contentWindow.location) {
