@@ -786,7 +786,6 @@ function buildChildUrl(baseUrl, page, params) {
 }
 
 function setFrameUrlReplace(url) {
-  currentChildWindow = null;
   if (!url) {
     hidePortalOverlay();
     return;
@@ -799,9 +798,11 @@ function setFrameUrlReplace(url) {
   }
   const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
   if (current === url) {
+    try { iframe.contentWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
     hidePortalOverlay();
     return;
   }
+  currentChildWindow = null;
   iframe.dataset.src = url;
   try {
     if (iframe.contentWindow && iframe.contentWindow.location) {
@@ -976,7 +977,8 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
-          if (!currentChildWindow || ev.source !== currentChildWindow) {
+          if (!currentChildWindow) currentChildWindow = ev.source;
+          if (ev.source !== currentChildWindow) {
             console.warn("[portal] ignoring navigate from non-current child window");
             break;
           }
@@ -1106,6 +1108,7 @@ function handlePortalPopState(ev) {
       }
     }
     if (page) {
+      try { document.getElementById('storeIframe')?.contentWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
       document.body.classList.add('store-view');
       updateSigninButtonVisibility(page);
       const iframe = document.getElementById('storeIframe');
