@@ -424,6 +424,50 @@ const state = {
   pendingPageParams: {},
 };
 
+let portalOverlayTimer = null;
+
+// Portal-side navigation overlay for history-driven transitions
+function showPortalOverlay() {
+  const body = document.body;
+  if (!body) return;
+  if (portalOverlayTimer) {
+    clearTimeout(portalOverlayTimer);
+    portalOverlayTimer = null;
+  }
+  const existing = document.getElementById("portalNavOverlay");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "portalNavOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "9999";
+  overlay.style.backdropFilter = "blur(4px)";
+  overlay.style.background = "rgba(255,255,255,0.5)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.innerHTML = `
+    <div style="text-align:center;">
+      <div class="spinner-border text-primary" role="status"></div>
+      <div style="margin-top:8px;font-weight:bold;">読み込み中…</div>
+    </div>`;
+  body.appendChild(overlay);
+  portalOverlayTimer = window.setTimeout(() => {
+    portalOverlayTimer = null;
+    hidePortalOverlay();
+  }, 10000);
+}
+
+function hidePortalOverlay() {
+  if (portalOverlayTimer) {
+    clearTimeout(portalOverlayTimer);
+    portalOverlayTimer = null;
+  }
+  const overlay = document.getElementById("portalNavOverlay");
+  if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+}
+
 const SIGNIN_BUTTON_PAGES = new Set(["31_index"]);
 
 const signinState = {
@@ -777,6 +821,7 @@ function applyChildNavigation(page, params, options) {
     }
     setPendingPage("", {});
     resetStoreIframe({ preserveBase: true });
+    hidePortalOverlay();
     return;
   }
 
@@ -798,10 +843,14 @@ function applyChildNavigation(page, params, options) {
     setPendingPage(page, sanitized);
     if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
     else setActivePage(page, sanitized);
+    hidePortalOverlay();
     return;
   }
   const nextUrl = buildChildUrl(base, page, sanitized);
-  if (!nextUrl) return;
+  if (!nextUrl) {
+    hidePortalOverlay();
+    return;
+  }
   setFrameUrlReplace(nextUrl);
   setPendingPage("", {});
   if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
@@ -999,6 +1048,8 @@ try {
 
 function handlePortalPopState(ev) {
   try {
+    showPortalOverlay();
+
     const url = new URL(window.location.href);
     updateSigninButtonVisibility(url.toString());
     let page = getParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
@@ -1042,14 +1093,17 @@ function handlePortalPopState(ev) {
       })();
       if (!reopened) {
         resetStoreIframe({ preserveBase: true });
+        hidePortalOverlay();
       }
       return;
     }
 
     window.history.replaceState({ page: "", params: {} }, "", url.toString());
     resetStoreIframe();
+    hidePortalOverlay();
   } catch (err) {
     console.warn("[portal] popstate handling failed", err);
+    hidePortalOverlay();
   }
 }
 
@@ -1613,6 +1667,7 @@ function loadStoreIframe(url) {
     resetStoreIframe();
     setStatus("errorMessage", "error");
     cancelAutoOpen();
+    hidePortalOverlay();
   }
 
   function handleLoad() {
@@ -1630,6 +1685,7 @@ function loadStoreIframe(url) {
     }
     cancelAutoOpen();
     updateSigninButtonVisibility();
+    hidePortalOverlay();
   }
 
   iframe.addEventListener("load", handleLoad);
