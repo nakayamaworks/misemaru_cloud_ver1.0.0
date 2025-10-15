@@ -974,6 +974,10 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
+          if (ev.source !== iframe.contentWindow) {
+            console.warn("[portal] ignoring navigate from non-current source");
+            break;
+          }
           const historyMode = d.replace ? "replace" : "push";
           if (typeof d.page === "string" && d.page) {
             try {
@@ -1099,6 +1103,13 @@ function handlePortalPopState(ev) {
       }
     }
     if (page) {
+      document.body.classList.add('store-view');
+      updateSigninButtonVisibility(page);
+      const iframe = document.getElementById('storeIframe');
+      iframe && iframe.addEventListener('load', () => {
+        hidePortalOverlay();
+        updateSigninButtonVisibility(page);
+      }, { once: true });
       const statePayload = { page, params };
       window.history.replaceState(statePayload, "", url.toString());
       applyChildNavigation(page, params, { historyMode: "replace", skipHistory: true });
