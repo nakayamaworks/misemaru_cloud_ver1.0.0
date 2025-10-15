@@ -1578,7 +1578,7 @@ function getStoreIframeElements() {
 }
 
 function resetStoreIframe(options) {
-  urrentChildWindow = null;
+  currentChildWindow = null;
   const opts = Object.assign({ preserveBase: false }, options || {});
   const { wrap, iframe } = getStoreIframeElements();
   if (iframe) {
