@@ -802,9 +802,17 @@ function setFrameUrlReplace(url) {
   const iframeWindow = (() => {
     try { return iframe.contentWindow || null; } catch (_) { return null; }
   })();
-  const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
+  const attrSrc = (() => {
+    try { return iframe.getAttribute("src") || ""; } catch (_) { return ""; }
+  })();
+  const dataSrc = iframe.dataset?.src || "";
+  let current = attrSrc || dataSrc;
+  if (attrSrc && attrSrc !== dataSrc) {
+    try { iframe.dataset.src = attrSrc; } catch (_) {}
+    current = attrSrc;
+  }
   try {
-    console.log("[portal] setFrameUrlReplace current", { current });
+    console.log("[portal] setFrameUrlReplace current", { attrSrc, dataSrc, current });
   } catch (_) {}
   if (current === url) {
     currentChildWindow = null;
