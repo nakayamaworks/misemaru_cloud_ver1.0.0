@@ -801,7 +801,7 @@ function setFrameUrlReplace(url) {
   })();
   const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
   if (current === url) {
-    if (iframeWindow) currentChildWindow = iframeWindow;
+    currentChildWindow = null;
     try {
       iframeWindow?.postMessage({ type: "misemaru:ping" }, "*");
       iframeWindow?.postMessage({ type: "misemaru:request-child-ready" }, "*");
@@ -809,7 +809,7 @@ function setFrameUrlReplace(url) {
     hidePortalOverlay();
     return;
   }
-  if (iframeWindow) currentChildWindow = iframeWindow;
+  currentChildWindow = null;
   iframe.dataset.src = url;
   try {
     if (iframe.contentWindow && iframe.contentWindow.location) {
@@ -984,10 +984,21 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
-          if (!currentChildWindow) currentChildWindow = ev.source;
-          if (ev.source !== currentChildWindow) {
-            console.warn("[portal] ignoring navigate from non-current child window");
-            break;
+          if (!currentChildWindow) {
+            console.log("[portal] binding currentChildWindow from navigate", { matchesIframe: ev.source === iframe.contentWindow });
+            currentChildWindow = ev.source;
+          } else if (ev.source !== currentChildWindow) {
+            const iframeWindow = (() => { try { return iframe.contentWindow || null; } catch (_) { return null; } })();
+            if (iframeWindow && ev.source === iframeWindow) {
+              console.log("[portal] re-binding currentChildWindow to iframe.contentWindow");
+              currentChildWindow = ev.source;
+            } else {
+              console.warn("[portal] ignoring navigate from non-current child window", {
+                hasPointer: !!currentChildWindow,
+                matchesIframe: iframeWindow ? ev.source === iframeWindow : "unknown"
+              });
+              break;
+            }
           }
           const historyMode = d.replace ? "replace" : "push";
           if (typeof d.page === "string" && d.page) {
@@ -1027,6 +1038,11 @@ try {
         }
 
         case "misemaru:child-ready": {
+          const iframeWindow = (() => { try { return iframe?.contentWindow || null; } catch (_) { return null; } })();
+          console.log("[portal] child ready source check", {
+            fromIframe: iframeWindow ? ev.source === iframeWindow : "unknown",
+            previousBound: !!currentChildWindow
+          });
           currentChildWindow = ev.source;
           console.log("[portal] child ready");
           hidePortalOverlay();
@@ -1120,7 +1136,7 @@ function handlePortalPopState(ev) {
       updateSigninButtonVisibility(page);
       try {
         const iframeWin = document.getElementById('storeIframe')?.contentWindow || null;
-        if (iframeWin) currentChildWindow = iframeWin;
+        currentChildWindow = null;
         iframeWin?.postMessage({ type: "misemaru:request-child-ready" }, "*");
       } catch (_) {}
       const iframe = document.getElementById('storeIframe');
