@@ -681,6 +681,19 @@ function updateSigninButtonVisibility(pageOrUrl) {
     }
   }
   if (!targetPage) targetPage = state.pendingPage || state.activePage || "";
+  const fallbackPage = state.pendingPage || state.activePage || "";
+  if (!SIGNIN_BUTTON_PAGES.has(targetPage) && SIGNIN_BUTTON_PAGES.has(fallbackPage)) {
+    targetPage = fallbackPage;
+  }
+  try {
+    console.log("[portal] updateSigninButtonVisibility", {
+      pageOrUrl,
+      resolved: targetPage,
+      fallback: fallbackPage,
+      signedIn: signinState.signedIn,
+      storeView: !!(document.body && document.body.classList && document.body.classList.contains("store-view"))
+    });
+  } catch (_) {}
 
   const body = document.body;
   const storeActive = !!(body && body.classList && body.classList.contains("store-view"));
