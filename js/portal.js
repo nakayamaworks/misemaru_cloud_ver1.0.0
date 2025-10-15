@@ -802,7 +802,10 @@ function setFrameUrlReplace(url) {
   const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
   if (current === url) {
     if (iframeWindow) currentChildWindow = iframeWindow;
-    try { iframeWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
+    try {
+      iframeWindow?.postMessage({ type: "misemaru:ping" }, "*");
+      iframeWindow?.postMessage({ type: "misemaru:request-child-ready" }, "*");
+    } catch (_) {}
     hidePortalOverlay();
     return;
   }
@@ -1118,6 +1121,7 @@ function handlePortalPopState(ev) {
       try {
         const iframeWin = document.getElementById('storeIframe')?.contentWindow || null;
         if (iframeWin) currentChildWindow = iframeWin;
+        iframeWin?.postMessage({ type: "misemaru:request-child-ready" }, "*");
       } catch (_) {}
       const iframe = document.getElementById('storeIframe');
       iframe && iframe.addEventListener('load', () => {
