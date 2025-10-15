@@ -1087,11 +1087,18 @@ try {
             fromIframe: iframeWindow ? ev.source === iframeWindow : "unknown",
             previousBound: !!currentChildWindow
           });
-          if (iframeWindow && ev.source !== iframeWindow) {
-            console.warn("[portal] ignoring child-ready from stale window");
+          const fromIframe = iframeWindow ? ev.source === iframeWindow : true;
+          if (!currentChildWindow) {
+            currentChildWindow = ev.source;
+          } else if (!fromIframe && ev.source !== currentChildWindow) {
+            console.warn("[portal] ignoring child-ready from stale window", {
+              hasPointer: !!currentChildWindow,
+              fromIframe
+            });
             break;
+          } else {
+            currentChildWindow = ev.source;
           }
-          currentChildWindow = ev.source;
           console.log("[portal] child ready");
           hidePortalOverlay();
           const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
