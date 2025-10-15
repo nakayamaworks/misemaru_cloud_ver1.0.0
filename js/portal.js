@@ -1013,6 +1013,7 @@ try {
 
         case "misemaru:child-ready": {
           console.log("[portal] child ready");
+          hidePortalOverlay();
           const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
           let page = "";
           try {
