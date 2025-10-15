@@ -425,6 +425,7 @@ const state = {
 };
 
 let portalOverlayTimer = null;
+let currentChildWindow = null;
 
 // Portal-side navigation overlay for history-driven transitions
 function showPortalOverlay() {
@@ -785,6 +786,7 @@ function buildChildUrl(baseUrl, page, params) {
 }
 
 function setFrameUrlReplace(url) {
+  currentChildWindow = null;
   if (!url) {
     hidePortalOverlay();
     return;
@@ -974,8 +976,8 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
-          if (ev.source !== iframe.contentWindow) {
-            console.warn("[portal] ignoring navigate from non-current source");
+          if (!currentChildWindow || ev.source !== currentChildWindow) {
+            console.warn("[portal] ignoring navigate from non-current child window");
             break;
           }
           const historyMode = d.replace ? "replace" : "push";
@@ -1016,6 +1018,7 @@ try {
         }
 
         case "misemaru:child-ready": {
+          currentChildWindow = ev.source;
           console.log("[portal] child ready");
           hidePortalOverlay();
           const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
@@ -1575,7 +1578,7 @@ function getStoreIframeElements() {
 }
 
 function resetStoreIframe(options) {
-  // 埋め込み状態を初期化し、フルスクリーン表示を閉じる
+  urrentChildWindow = null;
   const opts = Object.assign({ preserveBase: false }, options || {});
   const { wrap, iframe } = getStoreIframeElements();
   if (iframe) {
