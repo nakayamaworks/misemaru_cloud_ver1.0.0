@@ -796,13 +796,17 @@ function setFrameUrlReplace(url) {
     hidePortalOverlay();
     return;
   }
+  const iframeWindow = (() => {
+    try { return iframe.contentWindow || null; } catch (_) { return null; }
+  })();
   const current = iframe.dataset?.src || iframe.getAttribute("src") || "";
   if (current === url) {
-    try { iframe.contentWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
+    if (iframeWindow) currentChildWindow = iframeWindow;
+    try { iframeWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
     hidePortalOverlay();
     return;
   }
-  currentChildWindow = null;
+  if (iframeWindow) currentChildWindow = iframeWindow;
   iframe.dataset.src = url;
   try {
     if (iframe.contentWindow && iframe.contentWindow.location) {
@@ -1111,6 +1115,10 @@ function handlePortalPopState(ev) {
       try { document.getElementById('storeIframe')?.contentWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
       document.body.classList.add('store-view');
       updateSigninButtonVisibility(page);
+      try {
+        const iframeWin = document.getElementById('storeIframe')?.contentWindow || null;
+        if (iframeWin) currentChildWindow = iframeWin;
+      } catch (_) {}
       const iframe = document.getElementById('storeIframe');
       iframe && iframe.addEventListener('load', () => {
         hidePortalOverlay();
