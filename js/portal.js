@@ -974,11 +974,6 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
-          // ★ 古い子や第三者からの navigate を無視
-          if (ev.source !== iframe.contentWindow) {
-            console.warn("[portal] ignoring navigate from non-current child window");
-            break;
-          }
           const historyMode = d.replace ? "replace" : "push";
           if (typeof d.page === "string" && d.page) {
             try {
@@ -1090,7 +1085,7 @@ function handlePortalPopState(ev) {
     showPortalOverlay();
 
     const url = new URL(window.location.href);
-    updateSigninButtonVisibility(page);
+    updateSigninButtonVisibility(url.toString());
     let page = getParamCaseInsensitive(url.searchParams, PAGE_QUERY_KEY);
     let params = collectChildParams(url.searchParams);
     const friendlyId = getParamCaseInsensitive(url.searchParams, "id");
