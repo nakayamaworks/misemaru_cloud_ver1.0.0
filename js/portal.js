@@ -1087,6 +1087,10 @@ try {
             fromIframe: iframeWindow ? ev.source === iframeWindow : "unknown",
             previousBound: !!currentChildWindow
           });
+          if (iframeWindow && ev.source !== iframeWindow) {
+            console.warn("[portal] ignoring child-ready from stale window");
+            break;
+          }
           currentChildWindow = ev.source;
           console.log("[portal] child ready");
           hidePortalOverlay();
