@@ -426,6 +426,7 @@ const state = {
 
 let portalOverlayTimer = null;
 let currentChildWindow = null;
+let forceShowSigninOnce = false;
 
 // Portal-side navigation overlay for history-driven transitions
 function showPortalOverlay() {
@@ -493,7 +494,15 @@ function hidePortalOverlay() {
   if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
 
-const SIGNIN_BUTTON_PAGES = new Set(["31_index"]);
+function flushForceShowSignin() {
+  if (!forceShowSigninOnce) return;
+  forceShowSigninOnce = false;
+  try {
+    showSigninLayer();
+  } catch (_) {}
+}
+
+const SIGNIN_BUTTON_PAGES = new Set(["31_index", "32_index_admin"]);
 const FORCE_SHOW_SIGNIN_PAGES = new Set(["31_index", "32_index_admin"]);
 
 const signinState = {
@@ -905,11 +914,9 @@ function applyChildNavigation(page, params, options) {
     return;
   }
 
-  const maybeShowSignin = () => {
+  const markForceShowSignin = () => {
     if (!FORCE_SHOW_SIGNIN_PAGES.has(page)) return;
-    try {
-      showSigninLayer();
-    } catch (_) {}
+    forceShowSigninOnce = true;
   };
 
   if (opts.absoluteUrl) {
@@ -917,7 +924,7 @@ function applyChildNavigation(page, params, options) {
     setPendingPage("", {});
     if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
     else setActivePage(page, sanitized);
-    maybeShowSignin();
+    markForceShowSignin();
     return;
   }
 
@@ -951,7 +958,7 @@ function applyChildNavigation(page, params, options) {
   setPendingPage("", {});
   if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
   else setActivePage(page, sanitized);
-  maybeShowSignin();
+  markForceShowSignin();
 }
 
 function initializeHistoryFromLocation(url) {
@@ -1197,7 +1204,7 @@ function handlePortalPopState(ev) {
     }
     if (page) {
       if (FORCE_SHOW_SIGNIN_PAGES.has(page)) {
-        try { showSigninLayer(); } catch (_) {}
+        forceShowSigninOnce = true;
       }
       try { document.getElementById('storeIframe')?.contentWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
       document.body.classList.add('store-view');
@@ -1787,6 +1794,7 @@ function loadStoreIframe(url) {
       wrap.setAttribute("aria-hidden", "false");
       if (document.body) document.body.classList.add("store-view");
       updateSigninButtonVisibility();
+      flushForceShowSignin();
     });
   }
 
@@ -1799,6 +1807,7 @@ function loadStoreIframe(url) {
       wrap.setAttribute("aria-hidden", "false");
       if (document.body) document.body.classList.add("store-view");
       updateSigninButtonVisibility();
+      flushForceShowSignin();
     }
     setStoreOverlayMode(null);
     return;
@@ -1835,6 +1844,7 @@ function loadStoreIframe(url) {
     }
     cancelAutoOpen();
     updateSigninButtonVisibility();
+    flushForceShowSignin();
     hidePortalOverlay();
   }
 
