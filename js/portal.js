@@ -696,21 +696,27 @@ function updateSigninButtonVisibility(pageOrUrl) {
   }
 
   const candidatePages = [];
-  let inputPage = "";
+  const pushCandidate = (value) => {
+    if (!value && value !== 0) return;
+    const page = String(value).trim();
+    if (!page) return;
+    if (!candidatePages.includes(page)) candidatePages.push(page);
+  };
+
   if (typeof pageOrUrl === "string" && pageOrUrl.length) {
     try {
       if (pageOrUrl.includes("://")) {
-        inputPage = new URL(pageOrUrl, window.location.href).searchParams.get(PAGE_QUERY_KEY) || "";
+        const parsed = new URL(pageOrUrl, window.location.href).searchParams.get(PAGE_QUERY_KEY) || "";
+        pushCandidate(parsed);
       } else {
-        inputPage = pageOrUrl;
+        pushCandidate(pageOrUrl);
       }
     } catch (err) {
       console.warn("[portal:gsi] failed to parse page from input", pageOrUrl, err);
     }
   }
-  if (inputPage) candidatePages.push(String(inputPage));
-  if (state.pendingPage) candidatePages.push(String(state.pendingPage));
-  if (state.activePage) candidatePages.push(String(state.activePage));
+  pushCandidate(state.pendingPage);
+  pushCandidate(state.activePage);
 
   const { iframe } = getStoreIframeElements();
   if (iframe) {
@@ -718,33 +724,22 @@ function updateSigninButtonVisibility(pageOrUrl) {
       const src = iframe.dataset?.src || iframe.getAttribute("src") || "";
       if (src) {
         const iframePage = new URL(src, window.location.href).searchParams.get(PAGE_QUERY_KEY) || "";
-        if (iframePage) candidatePages.push(String(iframePage));
+        pushCandidate(iframePage);
       }
     } catch (err) {
       console.warn("[portal:gsi] failed to resolve page from iframe", err);
     }
   }
 
-  if (signinState.lastSigninEligiblePage) {
-    candidatePages.push(String(signinState.lastSigninEligiblePage));
-  }
-
-  const fallbackPage = candidatePages.find((page) => SIGNIN_BUTTON_PAGES.has(page)) || "";
-  let targetPage = candidatePages.find((page) => page) || fallbackPage || "";
-
-  if (!SIGNIN_BUTTON_PAGES.has(targetPage) && fallbackPage) {
-    targetPage = fallbackPage;
-  }
-
-  if (SIGNIN_BUTTON_PAGES.has(targetPage)) {
-    signinState.lastSigninEligiblePage = targetPage;
-  }
+  const resolvedPage = candidatePages.find((page) => page) || "";
+  const signinPage = candidatePages.find((page) => SIGNIN_BUTTON_PAGES.has(page)) || "";
+  signinState.lastSigninEligiblePage = signinPage || "";
   try {
     console.log("[portal] updateSigninButtonVisibility", {
       pageOrUrl,
       candidates: candidatePages,
-      resolved: targetPage,
-      fallback: fallbackPage,
+      resolved: resolvedPage,
+      signinPage,
       signedIn: signinState.signedIn,
       storeView: !!(document.body && document.body.classList && document.body.classList.contains("store-view"))
     });
@@ -756,15 +751,10 @@ function updateSigninButtonVisibility(pageOrUrl) {
     showSigninLayer();
     return;
   }
-  const force =
-    FORCE_SHOW_SIGNIN_PAGES.has(targetPage) ||
-    (fallbackPage && FORCE_SHOW_SIGNIN_PAGES.has(fallbackPage)) ||
-    (signinState.lastSigninEligiblePage && FORCE_SHOW_SIGNIN_PAGES.has(signinState.lastSigninEligiblePage));
   const shouldShow =
-    SIGNIN_BUTTON_PAGES.has(targetPage) &&
+    Boolean(signinPage) &&
     storeActive &&
-    Boolean(signinState.clientId) &&
-    (force || !signinState.signedIn);
+    Boolean(signinState.clientId);
 
   if (shouldShow) showSigninLayer();
   else hideSigninLayer();
