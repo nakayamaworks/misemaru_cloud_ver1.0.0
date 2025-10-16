@@ -724,11 +724,12 @@ function updateSigninButtonVisibility(pageOrUrl) {
     showSigninLayer();
     return;
   }
+  const force = FORCE_SHOW_SIGNIN_PAGES.has(targetPage);
   const shouldShow =
     SIGNIN_BUTTON_PAGES.has(targetPage) &&
-    !signinState.signedIn &&
     storeActive &&
-    Boolean(signinState.clientId);
+    Boolean(signinState.clientId) &&
+    (force || !signinState.signedIn);
 
   if (shouldShow) showSigninLayer();
   else hideSigninLayer();
