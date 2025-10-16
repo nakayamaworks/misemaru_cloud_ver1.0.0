@@ -516,6 +516,7 @@ const signinState = {
   lastCredential: "",
   googleReady: false,
   pendingCredential: false,
+  lastSigninEligiblePage: "",
 };
 
 function getSigninElements() {
@@ -624,6 +625,7 @@ window.debugSignin = () => {
       storeView,
       signedIn: signinState.signedIn,
       page: state.activePage || state.pendingPage,
+      lastSigninEligiblePage: signinState.lastSigninEligiblePage,
     });
   } catch (err) {
     console.warn("[debugSignin] failed", err);
@@ -693,26 +695,54 @@ function updateSigninButtonVisibility(pageOrUrl) {
     }
   }
 
-  let targetPage = "";
+  const candidatePages = [];
+  let inputPage = "";
   if (typeof pageOrUrl === "string" && pageOrUrl.length) {
     try {
       if (pageOrUrl.includes("://")) {
-        targetPage = new URL(pageOrUrl, window.location.href).searchParams.get("page") || "";
+        inputPage = new URL(pageOrUrl, window.location.href).searchParams.get(PAGE_QUERY_KEY) || "";
       } else {
-        targetPage = pageOrUrl;
+        inputPage = pageOrUrl;
       }
     } catch (err) {
       console.warn("[portal:gsi] failed to parse page from input", pageOrUrl, err);
     }
   }
-  if (!targetPage) targetPage = state.pendingPage || state.activePage || "";
-  const fallbackPage = state.pendingPage || state.activePage || "";
-  if (!SIGNIN_BUTTON_PAGES.has(targetPage) && SIGNIN_BUTTON_PAGES.has(fallbackPage)) {
+  if (inputPage) candidatePages.push(String(inputPage));
+  if (state.pendingPage) candidatePages.push(String(state.pendingPage));
+  if (state.activePage) candidatePages.push(String(state.activePage));
+
+  const { iframe } = getStoreIframeElements();
+  if (iframe) {
+    try {
+      const src = iframe.dataset?.src || iframe.getAttribute("src") || "";
+      if (src) {
+        const iframePage = new URL(src, window.location.href).searchParams.get(PAGE_QUERY_KEY) || "";
+        if (iframePage) candidatePages.push(String(iframePage));
+      }
+    } catch (err) {
+      console.warn("[portal:gsi] failed to resolve page from iframe", err);
+    }
+  }
+
+  if (signinState.lastSigninEligiblePage) {
+    candidatePages.push(String(signinState.lastSigninEligiblePage));
+  }
+
+  const fallbackPage = candidatePages.find((page) => SIGNIN_BUTTON_PAGES.has(page)) || "";
+  let targetPage = candidatePages.find((page) => page) || fallbackPage || "";
+
+  if (!SIGNIN_BUTTON_PAGES.has(targetPage) && fallbackPage) {
     targetPage = fallbackPage;
+  }
+
+  if (SIGNIN_BUTTON_PAGES.has(targetPage)) {
+    signinState.lastSigninEligiblePage = targetPage;
   }
   try {
     console.log("[portal] updateSigninButtonVisibility", {
       pageOrUrl,
+      candidates: candidatePages,
       resolved: targetPage,
       fallback: fallbackPage,
       signedIn: signinState.signedIn,
@@ -726,7 +756,10 @@ function updateSigninButtonVisibility(pageOrUrl) {
     showSigninLayer();
     return;
   }
-  const force = FORCE_SHOW_SIGNIN_PAGES.has(targetPage);
+  const force =
+    FORCE_SHOW_SIGNIN_PAGES.has(targetPage) ||
+    (fallbackPage && FORCE_SHOW_SIGNIN_PAGES.has(fallbackPage)) ||
+    (signinState.lastSigninEligiblePage && FORCE_SHOW_SIGNIN_PAGES.has(signinState.lastSigninEligiblePage));
   const shouldShow =
     SIGNIN_BUTTON_PAGES.has(targetPage) &&
     storeActive &&
@@ -1725,6 +1758,7 @@ function resetStoreIframe(options) {
   updateGlobalPreloaderMessage(DEFAULT_PRELOADER_MESSAGE_KEY);
   setStoreOverlayMode(null);
   document.body.classList.remove("store-view");
+  signinState.lastSigninEligiblePage = "";
   if (!opts.preserveBase) {
     currentStoreExecUrl = "";
     window.currentStoreExecUrl = "";
