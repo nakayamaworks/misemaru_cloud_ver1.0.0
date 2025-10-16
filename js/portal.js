@@ -559,10 +559,8 @@ function whenGoogleReady(cb) {
 function hideSigninLayer() {
   const { layer } = getSigninElements();
   if (!layer) return;
-  if (signinState.visible) {
-    layer.style.display = "none";
-    signinState.visible = false;
-  }
+  layer.style.display = "none";
+  signinState.visible = false;
 }
 
 function renderSigninButton() {
@@ -722,6 +720,10 @@ function updateSigninButtonVisibility(pageOrUrl) {
 
   const body = document.body;
   const storeActive = !!(body && body.classList && body.classList.contains("store-view"));
+  if (forceShowSigninOnce && FORCE_SHOW_SIGNIN_PAGES.has(targetPage)) {
+    showSigninLayer();
+    return;
+  }
   const shouldShow =
     SIGNIN_BUTTON_PAGES.has(targetPage) &&
     !signinState.signedIn &&
