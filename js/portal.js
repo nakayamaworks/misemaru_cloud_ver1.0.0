@@ -720,7 +720,7 @@ function updateSigninButtonVisibility(pageOrUrl) {
 
   const body = document.body;
   const storeActive = !!(body && body.classList && body.classList.contains("store-view"));
-  if (forceShowSigninOnce && FORCE_SHOW_SIGNIN_PAGES.has(targetPage)) {
+  if (forceShowSigninOnce) {
     showSigninLayer();
     return;
   }
