@@ -615,6 +615,21 @@ function showSigninLayer() {
   renderSigninButton();
 }
 
+window.debugSignin = () => {
+  try {
+    const { layer } = getSigninElements();
+    const storeView = !!(document.body && document.body.classList && document.body.classList.contains("store-view"));
+    console.log("[debugSignin]", {
+      visible: signinState.visible,
+      display: layer ? layer.style.display : "(missing layer)",
+      hasLayer: !!layer,
+      storeView,
+    });
+  } catch (err) {
+    console.warn("[debugSignin] failed", err);
+  }
+};
+
 function deliverCredentialToIframe(credential, targetWindow, targetOrigin) {
   if (!credential) return false;
   const { iframe } = getStoreIframeElements();
