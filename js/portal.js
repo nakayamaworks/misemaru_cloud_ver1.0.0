@@ -622,6 +622,8 @@ window.debugSignin = () => {
       display: layer ? layer.style.display : "(missing layer)",
       hasLayer: !!layer,
       storeView,
+      signedIn: signinState.signedIn,
+      page: state.activePage || state.pendingPage,
     });
   } catch (err) {
     console.warn("[debugSignin] failed", err);
