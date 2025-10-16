@@ -494,6 +494,7 @@ function hidePortalOverlay() {
 }
 
 const SIGNIN_BUTTON_PAGES = new Set(["31_index"]);
+const FORCE_SHOW_SIGNIN_PAGES = new Set(["31_index", "32_index_admin"]);
 
 const signinState = {
   layer: null,
@@ -904,11 +905,19 @@ function applyChildNavigation(page, params, options) {
     return;
   }
 
+  const maybeShowSignin = () => {
+    if (!FORCE_SHOW_SIGNIN_PAGES.has(page)) return;
+    try {
+      showSigninLayer();
+    } catch (_) {}
+  };
+
   if (opts.absoluteUrl) {
     setFrameUrlReplace(opts.absoluteUrl);
     setPendingPage("", {});
     if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
     else setActivePage(page, sanitized);
+    maybeShowSignin();
     return;
   }
 
@@ -942,6 +951,7 @@ function applyChildNavigation(page, params, options) {
   setPendingPage("", {});
   if (!opts.skipHistory) syncParentHistory(page, sanitized, historyMode);
   else setActivePage(page, sanitized);
+  maybeShowSignin();
 }
 
 function initializeHistoryFromLocation(url) {
@@ -1087,7 +1097,18 @@ try {
             fromIframe: iframeWindow ? ev.source === iframeWindow : "unknown",
             previousBound: !!currentChildWindow
           });
-          currentChildWindow = ev.source;
+          const fromIframe = iframeWindow ? ev.source === iframeWindow : true;
+          if (!currentChildWindow) {
+            currentChildWindow = ev.source;
+          } else if (!fromIframe && ev.source !== currentChildWindow) {
+            console.warn("[portal] ignoring child-ready from stale window", {
+              hasPointer: !!currentChildWindow,
+              fromIframe
+            });
+            break;
+          } else {
+            currentChildWindow = ev.source;
+          }
           console.log("[portal] child ready");
           hidePortalOverlay();
           const lang = state.lang || safeLocalStorageGet(LS_KEY) || "ja";
@@ -1175,6 +1196,9 @@ function handlePortalPopState(ev) {
       }
     }
     if (page) {
+      if (FORCE_SHOW_SIGNIN_PAGES.has(page)) {
+        try { showSigninLayer(); } catch (_) {}
+      }
       try { document.getElementById('storeIframe')?.contentWindow?.postMessage({ type: "misemaru:ping" }, "*"); } catch (_) {}
       document.body.classList.add('store-view');
       updateSigninButtonVisibility(page);
