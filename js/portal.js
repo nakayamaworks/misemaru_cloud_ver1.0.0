@@ -731,15 +731,25 @@ function updateSigninButtonVisibility(pageOrUrl) {
     }
   }
 
-  const resolvedPage = candidatePages.find((page) => page) || "";
-  const signinPage = candidatePages.find((page) => SIGNIN_BUTTON_PAGES.has(page)) || "";
-  signinState.lastSigninEligiblePage = signinPage || "";
+  let resolvedPage = candidatePages.find((page) => page) || "";
+  if (!resolvedPage && signinState.lastSigninEligiblePage) {
+    resolvedPage = signinState.lastSigninEligiblePage;
+  }
+  let signinPage = candidatePages.find((page) => SIGNIN_BUTTON_PAGES.has(page)) || "";
+  if (!signinPage && resolvedPage && SIGNIN_BUTTON_PAGES.has(resolvedPage)) {
+    signinPage = resolvedPage;
+  }
+  if (signinPage) {
+    signinState.lastSigninEligiblePage = signinPage;
+    try { window.__MIS_LAST_TOP_PAGE = signinState.lastSigninEligiblePage; } catch (_) {}
+  }
   try {
     console.log("[portal] updateSigninButtonVisibility", {
       pageOrUrl,
       candidates: candidatePages,
       resolved: resolvedPage,
       signinPage,
+      lastSigninEligiblePage: signinState.lastSigninEligiblePage,
       signedIn: signinState.signedIn,
       storeView: !!(document.body && document.body.classList && document.body.classList.contains("store-view"))
     });
