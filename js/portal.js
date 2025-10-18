@@ -1054,6 +1054,12 @@ function isAllowedChildOrigin(origin) {
   }
 }
 
+function normalizePageId(p) {
+  const v = String(p ?? "").trim();
+  if (!v || v === "undefined" || v === "null") return "31_index";
+  return v;
+}
+
 try {
   window.addEventListener(
     "message",
@@ -1098,6 +1104,8 @@ try {
             console.warn("[portal] navigate requested but iframe missing");
             break;
           }
+
+          // 既存の currentChildWindow バインド処理は維持
           if (!currentChildWindow) {
             console.log("[portal] binding currentChildWindow from navigate", { matchesIframe: ev.source === iframe.contentWindow });
             currentChildWindow = ev.source;
@@ -1114,39 +1122,43 @@ try {
               break;
             }
           }
+
           const historyMode = d.replace ? "replace" : "push";
-          if (typeof d.page === "string" && d.page) {
+
+          // ★ ここがポイント：page が空でも normalize で '31_index' に補正して処理する
+          if (typeof d.page === "string") {
+            const page = normalizePageId(d.page);
+            const params = (d.params && typeof d.params === "object") ? d.params : {};
+            try { showPortalOverlay?.(); } catch (_) {}
             try {
-              console.log("[portal] navigate request", {
-                page: d.page,
-                params: d.params || {},
-                mode: historyMode,
-              });
-            } catch (_) {}
-            applyChildNavigation(d.page, d.params || {}, { historyMode });
+              console.log("[portal] navigate request", { page, params, mode: historyMode });
+              applyChildNavigation(page, params, { historyMode });
+            } catch (err) {
+              console.warn("[portal] applyChildNavigation failed, fallback to 31_index", err);
+              try { applyChildNavigation("31_index", {}, { historyMode: "replace" }); } catch (_) {}
+            }
             break;
           }
+
+          // 既存：URL 指定での遷移もそのまま活かす
           if (typeof d.url === "string" && d.url) {
             try {
               const baseCandidate = currentStoreExecUrl || iframe.dataset?.base || window.location.href;
               const absolute = new URL(d.url, baseCandidate);
-              const page = absolute.searchParams.get(PAGE_QUERY_KEY) || "";
+              const page = normalizePageId(absolute.searchParams.get(PAGE_QUERY_KEY) || "");
               const params = collectChildParams(absolute.searchParams);
               console.log("[portal] navigate request", {
-                page,
-                params,
-                mode: historyMode,
-                absoluteUrl: absolute.toString(),
+                page, params, mode: historyMode, absoluteUrl: absolute.toString(),
               });
               applyChildNavigation(page, params, {
-                historyMode,
-                absoluteUrl: absolute.toString(),
+                historyMode, absoluteUrl: absolute.toString(),
               });
             } catch (err) {
               console.warn("[portal] navigate request had invalid URL", d.url, err);
             }
             break;
           }
+
           console.warn("[portal] navigate request missing page/url", d);
           break;
         }
