@@ -1044,11 +1044,22 @@ function isAllowedChildOrigin(origin) {
       window.__MIS_DEBUG_CHILD_ORIGINS_LOGGED = true;
     }
   } catch (_) {}
+
   if (!origin) return false;
+
+  // 登録済み許可リスト
   if (CHILD_ORIGINS.has(origin)) return true;
+
   try {
     const hostname = new URL(origin).hostname;
-    return hostname.endsWith(".googleusercontent.com");
+
+    // ★ 追加: GitHub Pages → GAS間の通信を許可
+    if (hostname.endsWith(".github.io")) return true;
+
+    // ★ 既存: GAS (googleusercontent.com) の通信を許可
+    if (hostname.endsWith(".googleusercontent.com")) return true;
+
+    return false;
   } catch (_) {
     return false;
   }
@@ -1064,6 +1075,7 @@ try {
   window.addEventListener(
     "message",
     (ev) => {
+      console.debug("[portal] received from", ev.origin, "allowed?", isAllowedChildOrigin(ev.origin));
       const iframe = document.getElementById("storeIframe");
       try {
         console.log("[portal] message received", {
